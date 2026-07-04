@@ -48,8 +48,10 @@ export const VoiceProvider = ({ children }) => {
       rec.onstart = () => {
         const phrase = settingsRef.current?.voiceWakePhrase || 'Hey Nova';
         if (voiceStateRef.current === 'ready') {
-          // Silent state for background wake-word listening
-          setVoiceMessage(`Nova is listening. Say "${phrase}"`);
+          const msg = phrase.toLowerCase() === 'hey nova'
+            ? 'Nova is listening. Say "Hey Nova"'
+            : `Nova is listening. Say "${phrase}" or "Hey Nova"`;
+          setVoiceMessage(msg);
         } else {
           setVoiceMessage('Listening...');
         }
@@ -124,11 +126,12 @@ export const VoiceProvider = ({ children }) => {
       };
 
       rec.onend = () => {
+        const isVoiceEnabled = settingsRef.current?.voiceEnabled ?? true;
         // If wake-word listening is enabled and state is ready, restart the background listener automatically
-        if (wakeWordListeningRef.current && voiceStateRef.current === 'ready') {
+        if (wakeWordListeningRef.current && voiceStateRef.current === 'ready' && isVoiceEnabled) {
           setTimeout(() => {
             try {
-              if (recognitionRef.current && voiceStateRef.current === 'ready') {
+              if (recognitionRef.current && voiceStateRef.current === 'ready' && settingsRef.current?.voiceEnabled !== false) {
                 recognitionRef.current.start();
               }
             } catch (e) {
@@ -143,7 +146,8 @@ export const VoiceProvider = ({ children }) => {
       // Start background wake word listener on mount
       setTimeout(() => {
         try {
-          if (recognitionRef.current && voiceStateRef.current === 'ready') {
+          const isVoiceEnabled = settingsRef.current?.voiceEnabled ?? true;
+          if (recognitionRef.current && voiceStateRef.current === 'ready' && isVoiceEnabled) {
             recognitionRef.current.start();
           }
         } catch (e) {}
@@ -174,7 +178,11 @@ export const VoiceProvider = ({ children }) => {
         try {
           if (voiceStateRef.current === 'ready') {
             recognitionRef.current.start();
-            setVoiceMessage(`Nova is listening. Say "${settings?.voiceWakePhrase || 'Hey Nova'}"`);
+            const phrase = settings?.voiceWakePhrase || 'Hey Nova';
+            const msg = phrase.toLowerCase() === 'hey nova'
+              ? 'Nova is listening. Say "Hey Nova"'
+              : `Nova is listening. Say "${phrase}" or "Hey Nova"`;
+            setVoiceMessage(msg);
           }
         } catch (e) {
           // Already running

@@ -5,6 +5,7 @@ import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '.
 import { ErrorResponse } from '../middleware/errorMiddleware.js';
 import { registerSchema, verifyOtpSchema, loginSchema, loginSendOtpSchema, loginVerifyOtpSchema } from '../validators/authValidator.js';
 import ActivityLog from '../models/ActivityLog.js';
+import Notification from '../models/Notification.js';
 import * as mockStore from '../utils/mockStore.js';
 import { sendEmail } from '../utils/email.js';
 
@@ -370,9 +371,72 @@ export const getMe = async (req, res, next) => {
     if (isDbConnected) {
       user = await User.findById(req.user._id);
       settings = await UserSettings.findOne({ user: req.user._id });
+      if (!settings) {
+        settings = await UserSettings.create({
+          user: req.user._id,
+          theme: 'dark',
+          highContrast: false,
+          reducedMotion: false,
+        });
+      }
+      if (!settings.members || settings.members.length === 0) {
+        settings.members = [
+          {
+            name: user.name || 'Workspace Owner',
+            email: user.email,
+            avatar: user.avatar || null,
+            role: 'owner',
+            status: 'active'
+          },
+          {
+            name: 'Alex Chen',
+            email: 'alex@novatask.ai',
+            avatar: null,
+            role: 'editor',
+            status: 'active'
+          },
+          {
+            name: 'Sarah Jenkins',
+            email: 'sarah@novatask.ai',
+            avatar: null,
+            role: 'admin',
+            status: 'active'
+          }
+        ];
+        await settings.save();
+      }
+
+      // Check if we need to create a team invitation notification
+      const pendingNotif = await Notification.findOne({ user: user._id, title: 'Workspace Team Invitation' });
+      if (!pendingNotif) {
+        const inviteSettings = await UserSettings.findOne({ "members.email": user.email.toLowerCase() });
+        if (inviteSettings) {
+          const inviter = await User.findById(inviteSettings.user);
+          await Notification.create({
+            user: user._id,
+            title: 'Workspace Team Invitation',
+            message: `You have been invited by ${inviter?.name || inviter?.email || 'a team member'} to join their workspace.`,
+            type: 'system',
+          });
+        }
+      }
     } else {
       user = await mockStore.findUserById(req.user._id);
       settings = await mockStore.getSettings(req.user._id);
+
+      const mockNotifs = await mockStore.getNotifications(user._id);
+      const pendingNotif = mockNotifs.find(n => n.title === 'Workspace Team Invitation');
+      if (!pendingNotif) {
+        const inviteSettings = await mockStore.findPendingInvite(user.email);
+        if (inviteSettings) {
+          const inviter = await mockStore.findUserById(inviteSettings.user);
+          await mockStore.createNotification(
+            user._id,
+            'Workspace Team Invitation',
+            `You have been invited by ${inviter?.name || inviter?.email || 'a team member'} to join their workspace.`
+          );
+        }
+      }
     }
 
     res.status(200).json({

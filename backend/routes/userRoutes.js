@@ -2,6 +2,7 @@ import express from 'express';
 import {
   updateProfile,
   updateSettings,
+  updateMembers,
   getActivityLogs,
   getNotifications,
   markNotificationRead,
@@ -16,6 +17,7 @@ router.use(protect);
 
 router.put('/profile', updateProfile);
 router.put('/settings', updateSettings);
+router.put('/settings/members', updateMembers);
 router.get('/activities', getActivityLogs);
 
 router.route('/notifications')

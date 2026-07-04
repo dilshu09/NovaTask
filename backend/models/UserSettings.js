@@ -37,6 +37,18 @@ const UserSettingsSchema = new mongoose.Schema(
       type: Number,
       default: 1.0,
     },
+    members: {
+      type: [
+        {
+          name: { type: String, default: '' },
+          email: { type: String, required: true },
+          avatar: { type: String, default: null },
+          role: { type: String, enum: ['owner', 'admin', 'editor', 'viewer'], default: 'editor' },
+          status: { type: String, enum: ['active', 'invited', 'inactive'], default: 'active' }
+        }
+      ],
+      default: []
+    },
   },
   {
     timestamps: true,

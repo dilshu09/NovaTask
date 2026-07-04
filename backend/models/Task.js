@@ -41,6 +41,16 @@ const TaskSchema = new mongoose.Schema(
       type: Number,
       default: 0, // For sorting Kanban and list views
     },
+    assignee: {
+      name: { type: String, default: null },
+      email: { type: String, default: null },
+      avatar: { type: String, default: null },
+    },
+    assignees: [{
+      name: { type: String, default: null },
+      email: { type: String, default: null },
+      avatar: { type: String, default: null },
+    }],
   },
   {
     timestamps: true,

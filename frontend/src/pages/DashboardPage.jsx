@@ -96,6 +96,32 @@ const DashboardPage = () => {
     navigate('/dashboard/tasks?create=true');
   };
 
+  const renderAssigneeAvatar = (task) => {
+    const assignee = task.assignee;
+    const hasAssignee = assignee && (assignee.name || assignee.email);
+
+    return (
+      <div 
+        className="w-5.5 h-5.5 rounded-full bg-indigo-50 border border-zinc-150 overflow-hidden flex items-center justify-center font-bold text-indigo-600 text-[8px] shrink-0"
+        title={hasAssignee ? `Assigned to: ${assignee.name || assignee.email}` : 'Unassigned'}
+      >
+        {hasAssignee ? (
+          assignee.avatar ? (
+            <img src={assignee.avatar} alt={assignee.name} className="w-full h-full object-cover" />
+          ) : (
+            assignee.name 
+              ? assignee.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() 
+              : (assignee.email || '').slice(0, 2).toUpperCase()
+          )
+        ) : (
+          <svg className="w-2.5 h-2.5 text-zinc-350" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        )}
+      </div>
+    );
+  };
+
   // Calculate dynamic stats
   const totalTasksCount = tasks.length;
   const completedCount = tasks.filter(t => t.status === 'done').length;
@@ -167,16 +193,35 @@ const DashboardPage = () => {
   // Filter tasks for "Today's Plan" display (first 6 items)
   const todaysPlanTasks = tasks.slice(0, 6);
 
-  // Calendar days grid generator for May 2024
-  const calendarDays = [
-    { day: 28, mock: true }, { day: 29, mock: true }, { day: 30, mock: true }, 
-    { day: 1 }, { day: 2 }, { day: 3 }, { day: 4 }, { day: 5 }, { day: 6 }, 
-    { day: 7 }, { day: 8 }, { day: 9 }, { day: 10 }, { day: 11 }, { day: 12 }, 
-    { day: 13 }, { day: 14 }, { day: 15, active: true }, { day: 16 }, { day: 17 }, 
-    { day: 18 }, { day: 19 }, { day: 20 }, { day: 21 }, { day: 22 }, { day: 23 }, 
-    { day: 24 }, { day: 25 }, { day: 26 }, { day: 27 }, { day: 28 }, { day: 29 }, 
-    { day: 30 }, { day: 31 }, { day: 1, mock: true }
-  ];
+  // Dynamic calendar generator for current month
+  const generateCalendarDays = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const today = now.getDate();
+    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrevMonth = new Date(year, month, 0).getDate();
+    const days = [];
+
+    // Previous month trailing days
+    for (let i = firstDay - 1; i >= 0; i--) {
+      days.push({ day: daysInPrevMonth - i, mock: true });
+    }
+    // Current month days
+    for (let d = 1; d <= daysInMonth; d++) {
+      days.push({ day: d, active: d === today });
+    }
+    // Next month leading days to fill grid to 35 or 42
+    const remaining = days.length <= 35 ? 35 - days.length : 42 - days.length;
+    for (let d = 1; d <= remaining; d++) {
+      days.push({ day: d, mock: true });
+    }
+    return days;
+  };
+
+  const calendarDays = generateCalendarDays();
+  const calendarMonthLabel = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   return (
     <motion.div 
@@ -296,9 +341,12 @@ const DashboardPage = () => {
                           {task.title}
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0 text-zinc-400 font-mono text-[10px] pl-2">
-                        {isHigh && <Flag className="w-3 h-3 text-red-500 fill-red-500" />}
-                        <span>{task.dueDate ? new Date(task.dueDate).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'}) : '9:00 AM'}</span>
+                      <div className="flex items-center gap-2 shrink-0 text-zinc-400 pl-2">
+                        {renderAssigneeAvatar(task)}
+                        <div className="flex items-center gap-1 font-mono text-[10px]">
+                          {isHigh && <Flag className="w-3 h-3 text-red-500 fill-red-500" />}
+                          <span>{task.dueDate ? new Date(task.dueDate).toLocaleTimeString([], {hour: 'numeric', minute:'2-digit'}) : ''}</span>
+                        </div>
                       </div>
                     </div>
                   );
@@ -410,7 +458,7 @@ const DashboardPage = () => {
             <div className="flex justify-between items-center text-xs">
               <span className="font-bold text-black font-display">Calendar</span>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] text-zinc-400 font-semibold font-mono">May 2024</span>
+                <span className="text-[10px] text-zinc-400 font-semibold font-mono">{calendarMonthLabel}</span>
                 <div className="flex gap-1">
                   <button className="p-0.5 rounded border border-zinc-100 hover:bg-zinc-50 text-zinc-400"><ChevronLeft className="w-3 h-3" /></button>
                   <button className="p-0.5 rounded border border-zinc-100 hover:bg-zinc-50 text-zinc-400"><ChevronRightIcon className="w-3 h-3" /></button>
@@ -418,7 +466,7 @@ const DashboardPage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-7 text-center text-[9px] text-zinc-400 font-bold border-b border-zinc-50 pb-1.5">
+            <div className="grid grid-cols-7 text-center text-[9px] text-zinc-400 font-bold border-b border-zinc-50 dark:border-zinc-800 pb-1.5">
               <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
             </div>
 
@@ -427,7 +475,7 @@ const DashboardPage = () => {
                 <div key={i} className="flex justify-center items-center">
                   <span className={`w-5 h-5 flex items-center justify-center rounded-full ${
                     d.active ? 'bg-indigo-600 text-white shadow-md' :
-                    d.mock ? 'text-zinc-300 font-light' : 'text-zinc-700 hover:bg-zinc-100'
+                    d.mock ? 'text-zinc-300 dark:text-zinc-600 font-light' : 'text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800'
                   }`}>
                     {d.day}
                   </span>
@@ -535,11 +583,14 @@ const DashboardPage = () => {
                         <span className="text-[10px] text-zinc-400 font-light uppercase tracking-wide">{task.category}</span>
                       </div>
                     </div>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
-                      isOverdue 
-                        ? 'text-red-500 bg-red-50' 
-                        : 'text-zinc-650 bg-zinc-100'
-                    }`}>{daysLeft}</span>
+                    <div className="flex items-center gap-3">
+                      {renderAssigneeAvatar(task)}
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                        isOverdue 
+                          ? 'text-red-500 bg-red-50' 
+                          : 'text-zinc-650 bg-zinc-100'
+                      }`}>{daysLeft}</span>
+                    </div>
                   </div>
                 );
               })

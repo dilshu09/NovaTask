@@ -2,12 +2,24 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
+import { useTheme } from './ThemeContext';
+
 const AuthContext = createContext(undefined);
 
 export const AuthProvider = ({ children }) => {
+  const { setTheme, setHighContrast, setReducedMotion } = useTheme();
   const [user, setUser] = useState(null);
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Sync loaded settings to the ThemeContext hooks
+  useEffect(() => {
+    if (settings) {
+      if (settings.theme) setTheme(settings.theme);
+      if (settings.highContrast !== undefined) setHighContrast(settings.highContrast);
+      if (settings.reducedMotion !== undefined) setReducedMotion(settings.reducedMotion);
+    }
+  }, [settings, setTheme, setHighContrast, setReducedMotion]);
 
   // Check if user session is active on startup
   useEffect(() => {
@@ -162,6 +174,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const inviteMember = async (email, name, role) => {
+    try {
+      const res = await api.put('/users/settings/members', { email, name, role });
+      // Only merge the members array — do NOT replace the full settings object
+      // to prevent the theme sync effect from overwriting the current local theme
+      setSettings(prev => ({
+        ...prev,
+        members: res.data.data?.members || prev?.members || [],
+      }));
+      toast.success('Collaborator invited successfully');
+      return { success: true };
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Invitation failed');
+      return { success: false };
+    }
+  };
+
   const sendLoginOtp = async (email) => {
     try {
       const res = await api.post('/auth/login/send-otp', { email });
@@ -207,6 +236,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         updateProfile,
         updateSettings,
+        inviteMember,
         sendLoginOtp,
         verifyLoginOtp,
       }}

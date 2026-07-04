@@ -16,14 +16,24 @@ export const getTasks = async (req, res, next) => {
     let tasks;
 
     if (isDbConnected) {
-      const query = { user: req.user._id };
+      const query = {
+        $or: [
+          { user: req.user._id },
+          { "assignee.email": { $regex: `^${req.user.email}$`, $options: 'i' } },
+          { "assignees.email": { $regex: `^${req.user.email}$`, $options: 'i' } }
+        ]
+      };
       if (status) query.status = status;
       if (priority) query.priority = priority;
       if (category) query.category = category;
       if (search) {
-        query.$or = [
-          { title: { $regex: search, $options: 'i' } },
-          { description: { $regex: search, $options: 'i' } },
+        query.$and = [
+          {
+            $or: [
+              { title: { $regex: search, $options: 'i' } },
+              { description: { $regex: search, $options: 'i' } },
+            ]
+          }
         ];
       }
       tasks = await Task.find(query).sort({ position: 1, createdAt: -1 });

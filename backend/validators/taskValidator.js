@@ -8,6 +8,16 @@ export const createTaskSchema = z.object({
   category: z.enum(['development', 'design', 'marketing', 'finance', 'operations', 'general']).optional(),
   dueDate: z.string().optional().nullable(),
   position: z.number().optional(),
+  assignee: z.object({
+    name: z.string().nullable().optional(),
+    email: z.string().nullable().optional(),
+    avatar: z.string().nullable().optional(),
+  }).optional().nullable(),
+  assignees: z.array(z.object({
+    name: z.string().nullable().optional(),
+    email: z.string().nullable().optional(),
+    avatar: z.string().nullable().optional(),
+  })).optional().nullable(),
 });
 
 export const updateTaskSchema = createTaskSchema.partial();

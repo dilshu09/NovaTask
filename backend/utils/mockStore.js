@@ -45,7 +45,14 @@ export const saveUser = async (user) => {
 
 // Task Operations
 export const getTasks = async (userId, filters = {}) => {
-  let userTasks = tasks.filter(t => t.user === userId.toString());
+  const user = users.find(u => u._id === userId.toString());
+  const userEmail = user?.email || '';
+
+  let userTasks = tasks.filter(t => 
+    t.user === userId.toString() || 
+    (t.assignee && t.assignee.email && t.assignee.email.toLowerCase() === userEmail.toLowerCase()) ||
+    (t.assignees && t.assignees.some(a => a.email && a.email.toLowerCase() === userEmail.toLowerCase()))
+  );
   
   if (filters.status) {
     userTasks = userTasks.filter(t => t.status === filters.status);
@@ -80,6 +87,7 @@ export const createTask = async (taskObj, userId) => {
     dueDate: taskObj.dueDate || null,
     position: taskObj.position ?? taskCount,
     user: userId.toString(),
+    assignee: taskObj.assignee || null,
     createdAt: new Date(),
   };
   tasks.push(newTask);
@@ -134,6 +142,7 @@ export const bulkUpdateTasks = async (ids, action, value, userId) => {
 export const getSettings = async (userId) => {
   let userSettings = settings.find(s => s.user === userId.toString());
   if (!userSettings) {
+    const userObj = users.find(u => u._id === userId.toString());
     userSettings = {
       _id: `mock_settings_${Date.now()}`,
       user: userId.toString(),
@@ -143,6 +152,29 @@ export const getSettings = async (userId) => {
       voiceWakePhrase: 'Hey Nova',
       voiceSpeed: 1.0,
       voicePitch: 1.0,
+      members: [
+        {
+          name: userObj?.name || 'Workspace Owner',
+          email: userObj?.email || 'owner@novatask.ai',
+          avatar: userObj?.avatar || null,
+          role: 'owner',
+          status: 'active'
+        },
+        {
+          name: 'Alex Chen',
+          email: 'alex@novatask.ai',
+          avatar: null,
+          role: 'editor',
+          status: 'active'
+        },
+        {
+          name: 'Sarah Jenkins',
+          email: 'sarah@novatask.ai',
+          avatar: null,
+          role: 'admin',
+          status: 'active'
+        }
+      ]
     };
     settings.push(userSettings);
   }
@@ -209,6 +241,10 @@ export const deleteNotification = async (notifId, userId) => {
     return true;
   }
   return false;
+};
+
+export const findPendingInvite = async (email) => {
+  return settings.find(s => s.members && s.members.some(m => m.email.toLowerCase() === email.toLowerCase()));
 };
 
 // Pre-populate with standard mock user for testing (password: password123)

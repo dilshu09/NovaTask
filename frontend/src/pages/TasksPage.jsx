@@ -24,16 +24,32 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { slideUp, staggerContainer, fadeIn } from '../animations/motion';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { useAuth } from '../contexts/AuthContext';
 
 
 const TasksPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user, settings, inviteMember } = useAuth();
+  const members = settings?.members || [];
 
   // Tasks Data States
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('All Tasks'); // All Tasks, To Do, In Progress, Completed, High Priority
-  const [searchQuery, setSearchQuery] = useState('');
+  const [filterPriority, setFilterPriority] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteRole, setInviteRole] = useState('editor');
+
+  // Assignee selection state (multi-member)
+  const [formAssignees, setFormAssignees] = useState([]);
+  const [filterAssignee, setFilterAssignee] = useState('all');
+  const [filterOwnership, setFilterOwnership] = useState('all'); // 'all' | 'personal' | 'collaborative'
 
   // Form Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -153,6 +169,7 @@ const TasksPage = () => {
     setFormCategory('general');
     setFormDueDate('');
     setFormProject('General');
+    setFormAssignees([]);
     setEditingTaskId(null);
     setIsModalOpen(true);
     if (searchParams.get('create') === 'true') {
@@ -168,6 +185,7 @@ const TasksPage = () => {
     setFormPriority(task.priority || 'medium');
     setFormCategory(task.category || 'general');
     setFormProject(task.description || 'General');
+    setFormAssignees(task.assignees || (task.assignee && (task.assignee.name || task.assignee.email) ? [task.assignee] : []));
     
     if (task.dueDate) {
       const d = new Date(task.dueDate);
@@ -196,7 +214,9 @@ const TasksPage = () => {
       priority: formPriority,
       category: formCategory,
       dueDate: formDueDate ? new Date(formDueDate).toISOString() : null,
-      description: formProject
+      description: formProject,
+      assignees: formAssignees.length > 0 ? formAssignees : [],
+      assignee: formAssignees.length === 1 ? formAssignees[0] : (formAssignees.length > 0 ? formAssignees[0] : null)
     };
 
     try {
@@ -271,7 +291,7 @@ const TasksPage = () => {
 
   // Filter Tasks list based on active sub tab
   const getFilteredTasks = () => {
-    let list = tasks;
+    let list = [...tasks];
 
     // Apply Tab filter
     if (activeTab === 'To Do') {
@@ -284,14 +304,87 @@ const TasksPage = () => {
       list = list.filter(t => t.priority === 'high');
     }
 
+    // Apply Priority dropdown filter
+    if (filterPriority !== 'all') {
+      list = list.filter(t => t.priority === filterPriority);
+    }
+
+    // Apply Category dropdown filter
+    if (filterCategory !== 'all') {
+      list = list.filter(t => t.category === filterCategory);
+    }
+
+    // Apply Assignee dropdown filter
+    if (filterAssignee !== 'all') {
+      if (filterAssignee === 'unassigned') {
+        list = list.filter(t => {
+          const hasAssignee = t.assignee && (t.assignee.name || t.assignee.email);
+          const hasAssignees = t.assignees && t.assignees.length > 0;
+          return !hasAssignee && !hasAssignees;
+        });
+      } else {
+        list = list.filter(t => {
+          const matchSingle = t.assignee && t.assignee.email?.toLowerCase() === filterAssignee.toLowerCase();
+          const matchMulti = t.assignees && t.assignees.some(a => a.email?.toLowerCase() === filterAssignee.toLowerCase());
+          return matchSingle || matchMulti;
+        });
+      }
+    }
+
+    // Apply Ownership filter (personal vs collaborative)
+    if (filterOwnership === 'personal') {
+      list = list.filter(t => {
+        const hasAssignee = t.assignee && (t.assignee.name || t.assignee.email);
+        const hasAssignees = t.assignees && t.assignees.length > 0;
+        return !hasAssignee && !hasAssignees;
+      });
+    } else if (filterOwnership === 'collaborative') {
+      list = list.filter(t => {
+        const hasAssignee = t.assignee && (t.assignee.name || t.assignee.email);
+        const hasAssignees = t.assignees && t.assignees.length > 0;
+        return hasAssignee || hasAssignees;
+      });
+    }
+
     // Apply Search filter
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
+    const searchQ = searchParams.get('search') || '';
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
       list = list.filter(t => 
         t.title.toLowerCase().includes(q) || 
         (t.description && t.description.toLowerCase().includes(q))
       );
     }
+
+    // Apply Sorting
+    list.sort((a, b) => {
+      if (sortBy === 'dueDate_asc') {
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(a.dueDate) - new Date(b.dueDate);
+      }
+      if (sortBy === 'dueDate_desc') {
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return new Date(b.dueDate) - new Date(a.dueDate);
+      }
+      if (sortBy === 'priority_highToLow') {
+        const weight = { high: 3, medium: 2, low: 1 };
+        return (weight[b.priority] || 0) - (weight[a.priority] || 0);
+      }
+      if (sortBy === 'priority_lowToHigh') {
+        const weight = { high: 3, medium: 2, low: 1 };
+        return (weight[a.priority] || 0) - (weight[b.priority] || 0);
+      }
+      if (sortBy === 'title_az') {
+        return a.title.localeCompare(b.title);
+      }
+      if (sortBy === 'title_za') {
+        return b.title.localeCompare(a.title);
+      }
+      // default: createdAt desc (newest first)
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
 
     return list;
   };
@@ -328,6 +421,38 @@ const TasksPage = () => {
     const dueStr = getColomboDayString(t.dueDate);
     return dueStr !== todayStr && dueStr !== tomorrowStr && new Date(t.dueDate) > new Date();
   });
+
+  const renderAssigneeAvatar = (task, size = 'medium') => {
+    const assignee = task.assignee;
+    const isSmall = size === 'small';
+    const classes = isSmall
+      ? "w-6 h-6 text-[8px]"
+      : "w-7 h-7 text-[9px]";
+    const iconSize = isSmall ? "w-3" : "w-3.5";
+
+    const hasAssignee = assignee && (assignee.name || assignee.email);
+
+    return (
+      <div 
+        className={`rounded-full bg-indigo-50 border border-zinc-150 overflow-hidden flex items-center justify-center font-bold text-indigo-600 shrink-0 ${classes}`}
+        title={hasAssignee ? `Assigned to: ${assignee.name || assignee.email}` : 'Unassigned'}
+      >
+        {hasAssignee ? (
+          assignee.avatar ? (
+            <img src={assignee.avatar} alt={assignee.name} className="w-full h-full object-cover" />
+          ) : (
+            assignee.name 
+              ? assignee.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() 
+              : (assignee.email || '').slice(0, 2).toUpperCase()
+          )
+        ) : (
+          <svg className={`${iconSize} text-zinc-350`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        )}
+      </div>
+    );
+  };
 
   const getPriorityBadge = (priority) => {
     if (priority === 'high') {
@@ -370,10 +495,117 @@ const TasksPage = () => {
   return (
     <div className="space-y-6 relative min-h-screen text-zinc-700">
       
-      {/* Title */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-display font-extrabold text-black tracking-tight">My Tasks</h1>
-        <p className="text-zinc-400 text-xs font-light">Manage and organize your tasks efficiently.</p>
+      {/* Title Header with Workspace Members Stack */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-display font-extrabold text-black tracking-tight">My Tasks</h1>
+          <p className="text-zinc-400 text-xs font-light">Manage and organize your tasks efficiently.</p>
+        </div>
+
+        {/* Team Members Avatar Stack */}
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider hidden sm:inline mr-1">Workspace Team:</span>
+          
+          <div className="flex -space-x-2.5 overflow-hidden">
+            {members.map((m, idx) => {
+              const nameInitials = m.name 
+                ? m.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() 
+                : (m.email || '').slice(0, 2).toUpperCase();
+              
+              return (
+                <div 
+                  key={m.email} 
+                  className="w-8.5 h-8.5 rounded-full border-2 border-white overflow-hidden bg-indigo-50 flex items-center justify-center font-bold text-indigo-600 text-[10px] shrink-0 shadow-sm transition-transform hover:scale-105"
+                  title={`${m.name || m.email} (${m.role})`}
+                  style={{ zIndex: 30 - idx }}
+                >
+                  {m.avatar ? (
+                    <img src={m.avatar} alt={m.name} className="w-full h-full object-cover" />
+                  ) : (
+                    nameInitials
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Invite Member Popup Button */}
+          <div className="relative">
+            <button
+              onClick={() => setIsInviteOpen(!isInviteOpen)}
+              className="w-8.5 h-8.5 rounded-full border border-dashed border-zinc-300 hover:border-indigo-500 hover:bg-indigo-50/30 flex items-center justify-center text-zinc-400 hover:text-indigo-600 transition-all cursor-pointer shadow-sm shrink-0"
+              title="Invite team member"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+
+            {/* Invite Popover Form */}
+            {isInviteOpen && (
+              <>
+                <div className="fixed inset-0 z-35" onClick={() => setIsInviteOpen(false)} />
+                <div className="absolute right-0 mt-2 w-72 bg-white border border-zinc-150 rounded-2xl shadow-xl p-4.5 z-40 space-y-4">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold text-black">Invite Collaborator</h4>
+                    <p className="text-[10px] text-zinc-400 font-light">Add a team member to this workspace.</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-semibold text-zinc-400 uppercase tracking-wide">Full Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. John Doe"
+                        value={inviteName}
+                        onChange={(e) => setInviteName(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-semibold text-zinc-400 uppercase tracking-wide">Email Address</label>
+                      <input 
+                        type="email" 
+                        placeholder="john@example.com"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-800 focus:outline-none focus:border-indigo-500"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-semibold text-zinc-400 uppercase tracking-wide">Role</label>
+                      <select
+                        value={inviteRole}
+                        onChange={(e) => setInviteRole(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs text-zinc-800 focus:outline-none cursor-pointer"
+                      >
+                         <option value="editor">Editor</option>
+                         <option value="admin">Admin</option>
+                         <option value="viewer">Viewer</option>
+                      </select>
+                    </div>
+
+                    <button
+                      onClick={async () => {
+                        if (!inviteEmail.trim()) {
+                          toast.error('Email is required');
+                          return;
+                        }
+                        const res = await inviteMember(inviteEmail, inviteName, inviteRole);
+                        if (res.success) {
+                          setInviteEmail('');
+                          setInviteName('');
+                          setIsInviteOpen(false);
+                        }
+                      }}
+                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/10 transition-colors cursor-pointer"
+                    >
+                      Invite Member
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Filter Tabs Header */}
@@ -446,14 +678,155 @@ const TasksPage = () => {
             </button>
           </div>
 
-          <button className="px-3.5 py-2 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-xl text-xs font-semibold flex items-center gap-1.5 text-zinc-600 cursor-pointer">
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-            Filters
-          </button>
-          <button className="px-3.5 py-2 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-xl text-xs font-semibold flex items-center gap-1.5 text-zinc-600 cursor-pointer">
-            <ArrowUpDown className="w-3.5 h-3.5" />
-            Sort
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => {
+                setIsFilterDropdownOpen(!isFilterDropdownOpen);
+                setIsSortDropdownOpen(false);
+              }}
+              className={`px-3.5 py-2 bg-white border rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all ${
+                isFilterDropdownOpen 
+                  ? 'border-indigo-500 text-indigo-600 bg-indigo-50/20' 
+                  : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Filters
+              {(filterPriority !== 'all' || filterCategory !== 'all' || filterAssignee !== 'all' || filterOwnership !== 'all') && (
+                <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+              )}
+            </button>
+            
+            {/* Filter Dropdown Menu */}
+            {isFilterDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-35" onClick={() => setIsFilterDropdownOpen(false)} />
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-zinc-150 rounded-2xl shadow-xl p-4 z-40 space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Priority</label>
+                    <select
+                      value={filterPriority}
+                      onChange={(e) => setFilterPriority(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-700 focus:outline-none cursor-pointer"
+                    >
+                      <option value="all">All Priorities</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Category</label>
+                    <select
+                      value={filterCategory}
+                      onChange={(e) => setFilterCategory(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-700 focus:outline-none cursor-pointer"
+                    >
+                      <option value="all">All Categories</option>
+                      <option value="general">General</option>
+                      <option value="design">Design</option>
+                      <option value="development">Development</option>
+                      <option value="backend">Backend</option>
+                      <option value="content">Content</option>
+                      <option value="meeting">Meeting</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Assignee</label>
+                    <select
+                      value={filterAssignee}
+                      onChange={(e) => setFilterAssignee(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-700 focus:outline-none cursor-pointer"
+                    >
+                      <option value="all">All Assignees</option>
+                      <option value="unassigned">Unassigned</option>
+                      {members.map(m => (
+                        <option key={m.email} value={m.email}>{m.name || m.email}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Task Type</label>
+                    <select
+                      value={filterOwnership}
+                      onChange={(e) => setFilterOwnership(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold text-zinc-700 focus:outline-none cursor-pointer"
+                    >
+                      <option value="all">All Tasks</option>
+                      <option value="personal">Personal Tasks</option>
+                      <option value="collaborative">Collaborative Tasks</option>
+                    </select>
+                  </div>
+                  {(filterPriority !== 'all' || filterCategory !== 'all' || filterAssignee !== 'all' || filterOwnership !== 'all') && (
+                    <button
+                      onClick={() => {
+                        setFilterPriority('all');
+                        setFilterCategory('all');
+                        setFilterAssignee('all');
+                        setFilterOwnership('all');
+                        setIsFilterDropdownOpen(false);
+                      }}
+                      className="w-full py-1.5 bg-zinc-100 hover:bg-zinc-200/70 text-zinc-600 rounded-xl text-[10px] font-bold transition-all cursor-pointer"
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="relative">
+            <button 
+              onClick={() => {
+                setIsSortDropdownOpen(!isSortDropdownOpen);
+                setIsFilterDropdownOpen(false);
+              }}
+              className={`px-3.5 py-2 bg-white border rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all ${
+                isSortDropdownOpen 
+                  ? 'border-indigo-500 text-indigo-600 bg-indigo-50/20' 
+                  : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
+              }`}
+            >
+              <ArrowUpDown className="w-3.5 h-3.5" />
+              Sort
+            </button>
+            
+            {/* Sort Dropdown Menu */}
+            {isSortDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-35" onClick={() => setIsSortDropdownOpen(false)} />
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-zinc-150 rounded-2xl shadow-xl py-2 z-40">
+                  {[
+                    { value: 'createdAt', label: 'Recently Created' },
+                    { value: 'dueDate_asc', label: 'Due Date (Earliest)' },
+                    { value: 'dueDate_desc', label: 'Due Date (Latest)' },
+                    { value: 'priority_highToLow', label: 'Priority (High to Low)' },
+                    { value: 'priority_lowToHigh', label: 'Priority (Low to High)' },
+                    { value: 'title_az', label: 'Alphabetical (A-Z)' },
+                    { value: 'title_za', label: 'Alphabetical (Z-A)' }
+                  ].map((option) => {
+                    const isSelected = sortBy === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setSortBy(option.value);
+                          setIsSortDropdownOpen(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-xs font-medium flex items-center justify-between transition-colors hover:bg-zinc-50 cursor-pointer ${
+                          isSelected ? 'text-indigo-600 font-bold bg-indigo-50/20' : 'text-zinc-655'
+                        }`}
+                      >
+                        <span>{option.label}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
           <button 
             onClick={openCreateModal}
             className="px-4 py-2 bg-[#5045e4] hover:bg-indigo-600 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/10 flex items-center gap-1.5 cursor-pointer"
@@ -521,6 +894,8 @@ const TasksPage = () => {
                           <span className="text-[10px] text-zinc-400 font-mono font-medium min-w-[50px] text-right">
                             {t.dueDate ? new Date(t.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'General'}
                           </span>
+
+                          {renderAssigneeAvatar(t)}
 
                           <div className="flex items-center gap-2 border-l border-zinc-100 pl-3 ml-1.5 shrink-0">
                             <button
@@ -602,6 +977,8 @@ const TasksPage = () => {
                             {new Date(t.dueDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
 
+                          {renderAssigneeAvatar(t)}
+
                           <div className="flex items-center gap-2 border-l border-zinc-100 pl-3 ml-1.5 shrink-0">
                             <button
                               onClick={() => openEditModal(t)}
@@ -679,6 +1056,8 @@ const TasksPage = () => {
                             {new Date(t.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                           </span>
 
+                          {renderAssigneeAvatar(t)}
+
                           <div className="flex items-center gap-2 border-l border-zinc-100 pl-3 ml-1.5 shrink-0">
                             <button
                               onClick={() => openEditModal(t)}
@@ -755,11 +1134,14 @@ const TasksPage = () => {
                           onDragStart={(e) => handleDragStart(e, t._id)}
                           className="bg-white p-4 rounded-xl border border-zinc-150 shadow-sm space-y-3.5 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-zinc-200 transition-all"
                         >
-                          <div className="space-y-1">
-                            <h4 className="text-xs font-bold text-zinc-800">{t.title}</h4>
-                            <p className="text-[10px] text-zinc-400 font-light truncate">
-                              {t.description || 'General'}
-                            </p>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <h4 className="text-xs font-bold text-zinc-800 break-words">{t.title}</h4>
+                              <p className="text-[10px] text-zinc-400 font-light truncate">
+                                {t.description || 'General'}
+                              </p>
+                            </div>
+                            {renderAssigneeAvatar(t, 'small')}
                           </div>
 
                           <div className="flex items-center justify-between pt-2.5 border-t border-zinc-50">
@@ -768,26 +1150,26 @@ const TasksPage = () => {
                             </div>
                             
                             <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => openEditModal(t)}
-                                className="p-1 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
-                                title="Edit Task"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleDeleteTask(t._id)}
-                                className="p-1 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                                title="Delete Task"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
+                                <button
+                                  onClick={() => openEditModal(t)}
+                                  className="p-1 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                                  title="Edit Task"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteTask(t._id)}
+                                  className="p-1 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                  title="Delete Task"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
                             </div>
-                          </div>
                         </motion.div>
                       ))
                     ) : (
@@ -1038,6 +1420,34 @@ const TasksPage = () => {
                     onChange={(e) => setFormDueDate(e.target.value)}
                     className="w-full px-3 py-2 bg-zinc-50 rounded-xl border border-zinc-200 focus:border-indigo-500 focus:outline-none text-xs text-zinc-800 cursor-pointer"
                   />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Assignee</label>
+                  <select
+                    value={formAssignee ? formAssignee.email : 'unassigned'}
+                    onChange={(e) => {
+                      const selectedEmail = e.target.value;
+                      if (selectedEmail === 'unassigned') {
+                        setFormAssignee(null);
+                      } else {
+                        const match = members.find(m => m.email === selectedEmail);
+                        if (match) {
+                          setFormAssignee({
+                            name: match.name,
+                            email: match.email,
+                            avatar: match.avatar
+                          });
+                        }
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-zinc-50 rounded-xl border border-zinc-200 focus:border-indigo-500 focus:outline-none text-xs text-zinc-800 cursor-pointer"
+                  >
+                    <option value="unassigned">Unassigned</option>
+                    {members.map(m => (
+                      <option key={m.email} value={m.email}>{m.name || m.email} ({m.role})</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div className="flex gap-3 pt-4 border-t border-zinc-100">

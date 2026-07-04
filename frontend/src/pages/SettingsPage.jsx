@@ -3,31 +3,32 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { 
-  Settings, 
-  Accessibility, 
-  Volume2, 
-  Eye, 
-  VolumeX, 
+import {
+  Settings,
+  Accessibility,
+  Volume2,
+  Eye,
+  VolumeX,
   Sparkles,
   Save,
   Check
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { slideUp, staggerContainer } from '../animations/motion';
+import api from '../services/api';
 
 const SettingsPage = () => {
   const navigate = useNavigate();
   const { settings, updateSettings, logout } = useAuth();
-  
+
   // Accessibility triggers from ThemeContext
-  const { 
-    theme, 
-    toggleTheme, 
-    highContrast, 
-    toggleHighContrast, 
-    reducedMotion, 
-    toggleReducedMotion 
+  const {
+    theme,
+    toggleTheme,
+    highContrast,
+    toggleHighContrast,
+    reducedMotion,
+    toggleReducedMotion
   } = useTheme();
 
   // Voice preference states
@@ -47,9 +48,12 @@ const SettingsPage = () => {
     }
   }, [settings]);
 
-  const handleSwitchAccount = async () => {
-    await logout();
-    navigate('/login');
+  const handleSwitchAccount = () => {
+    try {
+      localStorage.removeItem('accessToken');
+      api.post('/auth/logout').catch(() => {});
+    } catch (e) {}
+    window.location.href = '/api/auth/google';
   };
 
   const handleSaveSettings = async () => {
@@ -63,7 +67,7 @@ const SettingsPage = () => {
       voiceSpeed,
       voicePitch,
     };
-    
+
     const res = await updateSettings(payload);
     setSavingSettings(false);
     if (res.success) {
@@ -72,7 +76,7 @@ const SettingsPage = () => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       variants={staggerContainer}
       initial="hidden"
       animate="visible"
@@ -95,7 +99,7 @@ const SettingsPage = () => {
       </motion.div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
+
         {/* Section 1: Themes & Accessibility */}
         <motion.div variants={slideUp} className="bg-white p-6 rounded-2xl border border-zinc-100 shadow-sm space-y-6">
           <div className="flex items-center gap-2 border-b border-zinc-100 pb-3">
@@ -104,7 +108,7 @@ const SettingsPage = () => {
           </div>
 
           <div className="space-y-6">
-            
+
             {/* Dark Theme toggle */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
@@ -129,11 +133,10 @@ const SettingsPage = () => {
               </div>
               <button
                 onClick={toggleHighContrast}
-                className={`px-4 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                  highContrast 
-                    ? 'bg-indigo-600 border-indigo-500 text-white' 
-                    : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
-                }`}
+                className={`px-4 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${highContrast
+                  ? 'bg-indigo-600 border-indigo-500 text-white'
+                  : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
+                  }`}
               >
                 {highContrast ? 'Enabled' : 'Disabled'}
               </button>
@@ -149,11 +152,10 @@ const SettingsPage = () => {
               </div>
               <button
                 onClick={toggleReducedMotion}
-                className={`px-4 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                  reducedMotion 
-                    ? 'bg-indigo-600 border-indigo-500 text-white' 
-                    : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
-                }`}
+                className={`px-4 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${reducedMotion
+                  ? 'bg-indigo-600 border-indigo-500 text-white'
+                  : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
+                  }`}
               >
                 {reducedMotion ? 'Enabled' : 'Disabled'}
               </button>
@@ -170,7 +172,7 @@ const SettingsPage = () => {
           </div>
 
           <div className="space-y-5">
-            
+
             {/* Enable/Disable Voice Assistant */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
@@ -179,11 +181,10 @@ const SettingsPage = () => {
               </div>
               <button
                 onClick={() => setVoiceEnabled(!voiceEnabled)}
-                className={`px-4 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
-                  voiceEnabled 
-                    ? 'bg-indigo-600 border-indigo-500 text-white' 
-                    : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
-                }`}
+                className={`px-4 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${voiceEnabled
+                  ? 'bg-indigo-600 border-indigo-500 text-white'
+                  : 'bg-zinc-100 border-zinc-200 text-zinc-700 hover:bg-zinc-200'
+                  }`}
               >
                 {voiceEnabled ? 'Enabled' : 'Disabled'}
               </button>
@@ -251,17 +252,19 @@ const SettingsPage = () => {
             <h2 className="font-display font-semibold text-lg text-black">Workspace Session</h2>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4">
             <div className="space-y-0.5">
               <span className="text-sm font-semibold text-zinc-800">Switch Account</span>
-              <p className="text-xs text-zinc-500 font-light">Sign out of the current user session to authenticate as another user.</p>
+              <p className="text-xs text-zinc-500 font-light font-sans">Sign out of the current user session to authenticate as another user.</p>
             </div>
-            <button
-              onClick={handleSwitchAccount}
-              className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-md"
-            >
-              Switch Account
-            </button>
+            <div>
+              <button
+                onClick={handleSwitchAccount}
+                className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-md self-start"
+              >
+                Switch Account
+              </button>
+            </div>
           </div>
         </motion.div>
 
