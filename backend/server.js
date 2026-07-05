@@ -27,7 +27,7 @@ import ActivityLog from './models/ActivityLog.js';
 import { generateAccessToken, generateRefreshToken } from './utils/jwt.js';
 
 // Connect to database
-connectDB();
+await connectDB();
 
 import passport from './config/passport.js';
 
