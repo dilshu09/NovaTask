@@ -69,6 +69,12 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/voice', voiceRoutes);
 
+// Support both /api/* and root-level aliases for production deployments
+app.use('/auth', authRoutes);
+app.use('/tasks', taskRoutes);
+app.use('/users', userRoutes);
+app.use('/voice', voiceRoutes);
+
 // Add a mock social login callback endpoint for testing
 app.post('/api/auth/oauth-mock', async (req, res, next) => {
   try {

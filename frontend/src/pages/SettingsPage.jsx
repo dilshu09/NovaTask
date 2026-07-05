@@ -53,7 +53,7 @@ const SettingsPage = () => {
       localStorage.removeItem('accessToken');
       api.post('/auth/logout').catch(() => {});
     } catch (e) {}
-    window.location.href = '/api/auth/google';
+    window.location.href = import.meta.env.DEV ? '/api/auth/google' : '/auth/google';
   };
 
   const handleSaveSettings = async () => {

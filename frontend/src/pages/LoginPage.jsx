@@ -15,7 +15,7 @@ const LoginPage = () => {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const handleGoogleLogin = () => {
-    window.location.href = '/api/auth/google';
+    window.location.href = import.meta.env.DEV ? '/api/auth/google' : '/auth/google';
   };
 
   React.useEffect(() => {

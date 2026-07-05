@@ -4,7 +4,7 @@ import { ErrorResponse } from '../middleware/errorMiddleware.js';
 /**
  * Local Semantic Parser Fallback (when Gemini API Key is missing or offline)
  */
-const localIntentParser = (text, context) => {
+export const localIntentParser = (text, context) => {
   const query = text.toLowerCase().trim();
 
   // Helper to parse dates

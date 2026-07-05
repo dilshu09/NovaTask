@@ -227,6 +227,35 @@ export const VoiceProvider = ({ children }) => {
   };
 
   // Process matching commands
+  const parseVoiceCommandLocally = (text) => {
+    const query = text.toLowerCase().trim();
+
+    if (query.includes('open dashboard') || query.includes('go to dashboard')) {
+      return { action: 'navigatePage', parameters: { page: 'dashboard' }, response: 'Confirming. Navigating to dashboard.' };
+    }
+    if (query.includes('open tasks') || query.includes('go to tasks') || query.includes('show tasks') || query.includes('my task') || query.includes('my tasks')) {
+      return { action: 'navigatePage', parameters: { page: 'tasks' }, response: 'Confirming. Opening your task manager.' };
+    }
+    if (query.includes('go to login') || query.includes('open login') || query.includes('login page') || query.includes('sign in')) {
+      return { action: 'navigatePage', parameters: { page: 'login' }, response: 'Confirming. Redirecting to sign in.' };
+    }
+    if (query.includes('create account') || query.includes('sign up') || query.includes('go to register')) {
+      return { action: 'navigatePage', parameters: { page: 'register' }, response: 'Confirming. Redirecting to registration.' };
+    }
+    if (query.includes('login with google') || query.includes('continue with google') || query.includes('sign in with google')) {
+      return { action: 'loginOAuth', parameters: { provider: 'google' }, response: 'Confirming. Logging in with Google.' };
+    }
+    if (query.includes('logout') || query.includes('log out')) {
+      return { action: 'logout', parameters: {}, response: 'Confirming. Logging out of your workspace.' };
+    }
+
+    return {
+      action: 'none',
+      parameters: {},
+      response: "I recognized your transcript, but that command doesn't map to a workspace tool. Try saying 'Open Tasks' or 'Create Task [Title]'."
+    };
+  };
+
   const handleVoiceCommand = async (command) => {
     const text = command.trim();
     if (!text) return;
@@ -456,8 +485,16 @@ export const VoiceProvider = ({ children }) => {
 
     try {
       // Forward text to the backend API to handle NLP intent classification (Gemini or semantic fallback)
-      const res = await api.post('/voice/process', { transcript: text });
-      const { action, parameters, response } = res.data;
+      let parsedResult;
+      try {
+        const res = await api.post('/voice/process', { transcript: text });
+        parsedResult = res.data;
+      } catch (error) {
+        console.warn('Voice backend unavailable, using local fallback parser.', error);
+        parsedResult = parseVoiceCommandLocally(text);
+      }
+
+      const { action, parameters, response } = parsedResult;
 
       console.log(`[VOICE AGENT RESPONSE] Action: ${action}, Params:`, parameters);
 
