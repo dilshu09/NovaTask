@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Plus, 
-  Search, 
-  SlidersHorizontal, 
-  ArrowUpDown, 
-  Flag, 
-  Check, 
-  X, 
+import {
+  Plus,
+  Search,
+  SlidersHorizontal,
+  ArrowUpDown,
+  Flag,
+  Check,
+  X,
   ChevronRight,
   TrendingUp,
   LayoutGrid,
@@ -193,9 +193,9 @@ const TasksPage = () => {
 
   const toggleTaskDone = async (task) => {
     const nextStatus = task.status === 'done' ? 'todo' : 'done';
-    
+
     // Optimistic UI update
-    setTasks(prev => 
+    setTasks(prev =>
       prev.map(t => t._id === task._id ? { ...t, status: nextStatus } : t)
     );
 
@@ -236,7 +236,7 @@ const TasksPage = () => {
     setFormCategory(task.category || 'general');
     setFormProject(task.description || 'General');
     setFormAssignees(task.assignees || (task.assignee && (task.assignee.name || task.assignee.email) ? [task.assignee] : []));
-    
+
     if (task.dueDate) {
       const d = new Date(task.dueDate);
       const year = d.getFullYear();
@@ -335,7 +335,7 @@ const TasksPage = () => {
 
     // Optimistic status update
     const originalTasks = [...tasks];
-    setTasks(prev => 
+    setTasks(prev =>
       prev.map(t => t._id === id ? { ...t, status: targetStatus } : t)
     );
 
@@ -410,8 +410,8 @@ const TasksPage = () => {
     const searchQ = searchParams.get('search') || '';
     if (searchQ) {
       const q = searchQ.toLowerCase();
-      list = list.filter(t => 
-        t.title.toLowerCase().includes(q) || 
+      list = list.filter(t =>
+        t.title.toLowerCase().includes(q) ||
         (t.description && t.description.toLowerCase().includes(q))
       );
     }
@@ -451,7 +451,7 @@ const TasksPage = () => {
 
   // Split tasks into Today and Tomorrow lists
   const filteredList = getFilteredTasks();
-  
+
   const getColomboDayString = (date) => {
     if (!date) return '';
     const d = new Date(date);
@@ -459,7 +459,7 @@ const TasksPage = () => {
   };
 
   const todayStr = getColomboDayString(new Date());
-  
+
   const tom = new Date();
   tom.setDate(tom.getDate() + 1);
   const tomorrowStr = getColomboDayString(tom);
@@ -493,7 +493,7 @@ const TasksPage = () => {
     const hasAssignee = assignee && (assignee.name || assignee.email);
 
     return (
-      <div 
+      <div
         className={`rounded-full bg-indigo-50 border border-zinc-150 overflow-hidden flex items-center justify-center font-bold text-indigo-600 shrink-0 ${classes}`}
         title={hasAssignee ? `Assigned to: ${assignee.name || assignee.email}` : 'Unassigned'}
       >
@@ -501,8 +501,8 @@ const TasksPage = () => {
           assignee.avatar ? (
             <img src={assignee.avatar} alt={assignee.name} className="w-full h-full object-cover" />
           ) : (
-            assignee.name 
-              ? assignee.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() 
+            assignee.name
+              ? assignee.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
               : (assignee.email || '').slice(0, 2).toUpperCase()
           )
         ) : (
@@ -554,7 +554,7 @@ const TasksPage = () => {
 
   return (
     <div className="space-y-6 relative min-h-screen text-zinc-700">
-      
+
       {/* Title Header with Workspace Members Stack */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -565,16 +565,16 @@ const TasksPage = () => {
         {/* Team Members Avatar Stack */}
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider hidden sm:inline mr-1">Workspace Team:</span>
-          
+
           <div className="flex -space-x-2.5 overflow-hidden">
             {members.map((m, idx) => {
-              const nameInitials = m.name 
-                ? m.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() 
+              const nameInitials = m.name
+                ? m.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
                 : (m.email || '').slice(0, 2).toUpperCase();
-              
+
               return (
-                <div 
-                  key={m.email} 
+                <div
+                  key={m.email}
                   className="w-8.5 h-8.5 rounded-full border-2 border-white overflow-hidden bg-indigo-50 flex items-center justify-center font-bold text-indigo-600 text-[10px] shrink-0 shadow-sm transition-transform hover:scale-105"
                   title={`${m.name || m.email} (${m.role})`}
                   style={{ zIndex: 30 - idx }}
@@ -603,7 +603,7 @@ const TasksPage = () => {
 
       {/* Filter Tabs Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-zinc-100 pb-1.5">
-        
+
         {/* Tabs selector */}
         <div className="flex flex-wrap items-center gap-6 text-xs font-bold text-zinc-400 shrink-0">
           {[
@@ -618,18 +618,16 @@ const TasksPage = () => {
               <button
                 key={tab.label}
                 onClick={() => setActiveTab(tab.label)}
-                className={`pb-3.5 relative flex items-center gap-1.5 cursor-pointer transition-colors ${
-                  isActive ? 'text-indigo-600' : 'hover:text-zinc-600'
-                }`}
+                className={`pb-3.5 relative flex items-center gap-1.5 cursor-pointer transition-colors ${isActive ? 'text-indigo-600' : 'hover:text-zinc-600'
+                  }`}
               >
                 <span>{tab.label}</span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                  isActive ? 'bg-indigo-50 text-indigo-600' : 'bg-zinc-100 text-zinc-500'
-                }`}>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${isActive ? 'bg-indigo-50 text-indigo-600' : 'bg-zinc-100 text-zinc-500'
+                  }`}>
                   {tab.count}
                 </span>
                 {isActive && (
-                  <motion.div 
+                  <motion.div
                     layoutId="activeTabUnderline"
                     className="absolute bottom-0 inset-x-0 h-0.5 bg-indigo-600"
                   />
@@ -645,11 +643,10 @@ const TasksPage = () => {
           <div className="bg-zinc-100 p-0.5 rounded-xl flex items-center gap-0.5 border border-zinc-200/50 mr-1.5">
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition-all ${
-                viewMode === 'list' 
-                  ? 'bg-white text-indigo-600 shadow-sm' 
+              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition-all ${viewMode === 'list'
+                  ? 'bg-white text-indigo-600 shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-800'
-              }`}
+                }`}
               title="List View"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -658,11 +655,10 @@ const TasksPage = () => {
             </button>
             <button
               onClick={() => setViewMode('board')}
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition-all ${
-                viewMode === 'board' 
-                  ? 'bg-white text-indigo-600 shadow-sm' 
+              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center justify-center cursor-pointer transition-all ${viewMode === 'board'
+                  ? 'bg-white text-indigo-600 shadow-sm'
                   : 'text-zinc-500 hover:text-zinc-800'
-              }`}
+                }`}
               title="Board View"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -672,16 +668,15 @@ const TasksPage = () => {
           </div>
 
           <div className="relative">
-            <button 
+            <button
               onClick={() => {
                 setIsFilterDropdownOpen(!isFilterDropdownOpen);
                 setIsSortDropdownOpen(false);
               }}
-              className={`px-3.5 py-2 bg-white border rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all ${
-                isFilterDropdownOpen 
-                  ? 'border-indigo-500 text-indigo-600 bg-indigo-50/20' 
+              className={`px-3.5 py-2 bg-white border rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all ${isFilterDropdownOpen
+                  ? 'border-indigo-500 text-indigo-600 bg-indigo-50/20'
                   : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-              }`}
+                }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               Filters
@@ -689,7 +684,7 @@ const TasksPage = () => {
                 <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
               )}
             </button>
-            
+
             {/* Filter Dropdown Menu */}
             {isFilterDropdownOpen && (
               <>
@@ -770,21 +765,20 @@ const TasksPage = () => {
           </div>
 
           <div className="relative">
-            <button 
+            <button
               onClick={() => {
                 setIsSortDropdownOpen(!isSortDropdownOpen);
                 setIsFilterDropdownOpen(false);
               }}
-              className={`px-3.5 py-2 bg-white border rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all ${
-                isSortDropdownOpen 
-                  ? 'border-indigo-500 text-indigo-600 bg-indigo-50/20' 
+              className={`px-3.5 py-2 bg-white border rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all ${isSortDropdownOpen
+                  ? 'border-indigo-500 text-indigo-600 bg-indigo-50/20'
                   : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-              }`}
+                }`}
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
               Sort
             </button>
-            
+
             {/* Sort Dropdown Menu */}
             {isSortDropdownOpen && (
               <>
@@ -807,9 +801,8 @@ const TasksPage = () => {
                           setSortBy(option.value);
                           setIsSortDropdownOpen(false);
                         }}
-                        className={`w-full px-4 py-2 text-left text-xs font-medium flex items-center justify-between transition-colors hover:bg-zinc-50 cursor-pointer ${
-                          isSelected ? 'text-indigo-600 font-bold bg-indigo-50/20' : 'text-zinc-655'
-                        }`}
+                        className={`w-full px-4 py-2 text-left text-xs font-medium flex items-center justify-between transition-colors hover:bg-zinc-50 cursor-pointer ${isSelected ? 'text-indigo-600 font-bold bg-indigo-50/20' : 'text-zinc-655'
+                          }`}
                       >
                         <span>{option.label}</span>
                         {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" />}
@@ -820,7 +813,7 @@ const TasksPage = () => {
               </>
             )}
           </div>
-          <button 
+          <button
             onClick={openCreateModal}
             className="px-4 py-2 bg-[#5045e4] hover:bg-indigo-600 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/10 flex items-center gap-1.5 cursor-pointer"
           >
@@ -833,12 +826,12 @@ const TasksPage = () => {
 
       {/* Main content splits */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        
+
         {/* Left Column: Scheduled Groups */}
         {viewMode === 'list' ? (
           /* Left Column: Scheduled Groups (List View) */
           <div className="lg:col-span-8 space-y-8">
-            
+
             {/* Today Group */}
             <div className="space-y-3.5">
               <div className="flex items-center justify-between">
@@ -860,11 +853,10 @@ const TasksPage = () => {
                         <div className="flex items-center gap-3.5 min-w-0">
                           <button
                             onClick={() => toggleTaskDone(t)}
-                            className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
-                              isDone 
-                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-md' 
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all cursor-pointer ${isDone
+                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
                                 : 'border-zinc-300 hover:border-indigo-500 bg-white'
-                            }`}
+                              }`}
                           >
                             {isDone && <Check className="w-3.5 h-3.5" />}
                           </button>
@@ -943,11 +935,10 @@ const TasksPage = () => {
                         <div className="flex items-center gap-3.5 min-w-0">
                           <button
                             onClick={() => toggleTaskDone(t)}
-                            className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
-                              isDone 
-                                ? 'bg-indigo-600 border-indigo-600 text-white' 
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all cursor-pointer ${isDone
+                                ? 'bg-indigo-600 border-indigo-600 text-white'
                                 : 'border-zinc-300 hover:border-indigo-500 bg-white'
-                            }`}
+                              }`}
                           >
                             {isDone && <Check className="w-3.5 h-3.5" />}
                           </button>
@@ -1022,11 +1013,10 @@ const TasksPage = () => {
                         <div className="flex items-center gap-3.5 min-w-0">
                           <button
                             onClick={() => toggleTaskDone(t)}
-                            className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all cursor-pointer ${
-                              isDone 
-                                ? 'bg-indigo-600 border-indigo-600 text-white' 
+                            className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all cursor-pointer ${isDone
+                                ? 'bg-indigo-600 border-indigo-600 text-white'
                                 : 'border-zinc-300 hover:border-indigo-500 bg-white'
-                            }`}
+                              }`}
                           >
                             {isDone && <Check className="w-3.5 h-3.5" />}
                           </button>
@@ -1092,18 +1082,17 @@ const TasksPage = () => {
             ].map((col) => {
               const colTasks = filteredList.filter(t => t.status === col.status);
               const isOver = dragOverCol === col.status;
-              
+
               return (
-                <div 
-                  key={col.status} 
+                <div
+                  key={col.status}
                   onDragOver={(e) => handleDragOver(e, col.status)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, col.status)}
-                  className={`space-y-4 rounded-2xl p-4 transition-all duration-200 border ${
-                    isOver 
-                      ? 'bg-indigo-50/40 border-2 border-dashed border-indigo-300 shadow-inner' 
+                  className={`space-y-4 rounded-2xl p-4 transition-all duration-200 border ${isOver
+                      ? 'bg-indigo-50/40 border-2 border-dashed border-indigo-300 shadow-inner'
                       : 'bg-zinc-50/50 border-zinc-100 shadow-sm'
-                  }`}
+                    }`}
                 >
                   {/* Column Header */}
                   <div className="flex items-center justify-between pb-2 border-b border-zinc-100">
@@ -1141,28 +1130,28 @@ const TasksPage = () => {
                             <div className="flex items-center gap-1.5">
                               {getPriorityBadge(t.priority)}
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => openEditModal(t)}
-                                  className="p-1 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
-                                  title="Edit Task"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                  </svg>
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteTask(t._id)}
-                                  className="p-1 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                                  title="Delete Task"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </button>
-                              </div>
+                              <button
+                                onClick={() => openEditModal(t)}
+                                className="p-1 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                                title="Edit Task"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteTask(t._id)}
+                                className="p-1 rounded-lg text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                                title="Delete Task"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
                             </div>
+                          </div>
                         </motion.div>
                       ))
                     ) : (
@@ -1179,7 +1168,7 @@ const TasksPage = () => {
 
         {/* Right Column: Detailed Analytics Widgets */}
         <div className="lg:col-span-4 space-y-6">
-          
+
           {/* Widget 1: Task Summary Donut Chart */}
           <div className="bg-white p-5 rounded-2xl border border-zinc-100 shadow-sm space-y-4">
             <h3 className="font-display font-extrabold text-xs text-black uppercase tracking-wider flex items-center gap-2">
@@ -1193,13 +1182,13 @@ const TasksPage = () => {
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                   {/* Outer circle layout segment */}
                   <circle cx="18" cy="18" r="15.915" fill="none" stroke="#f1f5f9" strokeWidth="3" />
-                  
+
                   {/* Completed Segment */}
                   <circle cx="18" cy="18" r="15.915" fill="none" stroke="#10b981" strokeWidth="3" strokeDasharray={`${completedPct} 100`} strokeDashoffset="0" />
-                  
+
                   {/* In Progress Segment */}
                   <circle cx="18" cy="18" r="15.915" fill="none" stroke="#3b82f6" strokeWidth="3" strokeDasharray={`${progressPct} 100`} strokeDashoffset={`-${completedPct}`} />
-                  
+
                   {/* To Do Segment */}
                   <circle cx="18" cy="18" r="15.915" fill="none" stroke="#94a3b8" strokeWidth="3" strokeDasharray={`${todoPct} 100`} strokeDashoffset={`-${completedPct + progressPct}`} />
                 </svg>
@@ -1295,7 +1284,7 @@ const TasksPage = () => {
                 <svg className="w-full h-full transform" viewBox="0 0 100 50">
                   {/* Base track */}
                   <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#f1f5f9" strokeWidth="8" strokeLinecap="round" />
-                  
+
                   {/* Gauge value dynamic path */}
                   <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#10b981" strokeWidth="8" strokeLinecap="round" strokeDasharray="126" strokeDashoffset={dashOffset} className="transition-all duration-500 ease-out" />
                 </svg>
@@ -1307,10 +1296,10 @@ const TasksPage = () => {
 
               <div className="text-center mt-4 space-y-1">
                 <p className="text-[10px] text-zinc-400 font-light">
-                  {productivityScore >= 80 
-                    ? "Fantastic! You are extremely productive! 🚀" 
-                    : productivityScore >= 50 
-                      ? "Great progress! Keep completing tasks. 👍" 
+                  {productivityScore >= 80
+                    ? "Fantastic! You are extremely productive! 🚀"
+                    : productivityScore >= 50
+                      ? "Great progress! Keep completing tasks. 👍"
                       : "Start completing tasks to boost your score! 💪"}
                 </p>
               </div>
@@ -1380,7 +1369,7 @@ const TasksPage = () => {
                       ref={inviteNameRef}
                       id="invite-name"
                       type="text"
-                      placeholder="e.g. John Doe"
+                      placeholder="name"
                       value={inviteName}
                       onChange={(e) => setInviteName(e.target.value)}
                       className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:bg-zinc-800"
@@ -1394,7 +1383,7 @@ const TasksPage = () => {
                     <input
                       id="invite-email"
                       type="email"
-                      placeholder="john@example.com"
+                      placeholder="kasun@gmal.com"
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
                       className="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-sm text-zinc-800 outline-none transition-all placeholder:text-zinc-400 focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:bg-zinc-800"
@@ -1421,11 +1410,10 @@ const TasksPage = () => {
                           key={role.value}
                           type="button"
                           onClick={() => setInviteRole(role.value)}
-                          className={`min-h-[104px] rounded-xl border p-3 text-left transition-all ${
-                            isSelected
+                          className={`min-h-[104px] rounded-xl border p-3 text-left transition-all ${isSelected
                               ? 'border-indigo-500 bg-indigo-50 text-indigo-900 ring-4 ring-indigo-500/10 dark:bg-indigo-500/15 dark:text-indigo-100'
                               : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 hover:bg-white dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
-                          }`}
+                            }`}
                         >
                           <span className="flex items-center justify-between gap-2">
                             <span className="text-xs font-extrabold">{role.label}</span>
@@ -1467,7 +1455,7 @@ const TasksPage = () => {
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
-            <motion.div 
+            <motion.div
               variants={fadeIn}
               initial="hidden"
               animate="visible"
@@ -1491,7 +1479,7 @@ const TasksPage = () => {
               </div>
 
               <form onSubmit={handleSaveTask} className="space-y-4">
-                
+
                 <div className="space-y-1">
                   <label className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Task Title</label>
                   <input
@@ -1554,9 +1542,8 @@ const TasksPage = () => {
                         setShowTimeInput(prev => !prev);
                         if (showTimeInput) setFormDueTime('');
                       }}
-                      className={`text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${
-                        showTimeInput ? 'text-indigo-600' : 'text-zinc-400 hover:text-zinc-600'
-                      }`}
+                      className={`text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer ${showTimeInput ? 'text-indigo-600' : 'text-zinc-400 hover:text-zinc-600'
+                        }`}
                     >
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z" />
