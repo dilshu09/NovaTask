@@ -176,7 +176,8 @@ html, body {
 
 /* Override layout background */
 .dark div.bg-\[\#f7f8fc\], 
-.dark .bg-\[\#f7f8fc\] {
+.dark .bg-\[\#f7f8fc\],
+.dark .bg-\[\#fafafc\] {
   background-color: #09090b !important;
 }
 
