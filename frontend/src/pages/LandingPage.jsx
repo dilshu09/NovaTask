@@ -88,13 +88,7 @@ const LandingPage = () => {
           </span>
         </div>
         
-        {/* Nav Links */}
-        <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
-          <a href="#" className="hover:text-white transition-colors">Features</a>
-          <a href="#" className="hover:text-white transition-colors">How it Works</a>
-          <a href="#" className="hover:text-white transition-colors">Pricing</a>
-          <a href="#" className="hover:text-white transition-colors">About</a>
-        </nav>
+        
         
         <div className="flex items-center gap-4">
           <button 
@@ -158,13 +152,7 @@ const LandingPage = () => {
                 Get Started Free
               </button>
 
-              <button 
-                onClick={handleVoiceDemo}
-                className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-semibold text-white flex items-center gap-2 transition-all cursor-pointer"
-              >
-                <Play className="w-4 h-4 fill-white" />
-                Watch Demo
-              </button>
+              
             </motion.div>
 
             <motion.p 

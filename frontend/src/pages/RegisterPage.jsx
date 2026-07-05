@@ -2,19 +2,20 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, Sparkles, ArrowRight, Check, KeyRound, Chrome, Apple, Facebook, ShieldCheck, HelpCircle, Compass, Activity } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Mail, User, Sparkles, ArrowRight, ShieldCheck, Compass, Activity } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useVoice } from '../contexts/VoiceContext';
 import { registerSchema } from '../validators/authValidator';
-import { slideUp, staggerContainer, scaleIn } from '../animations/motion';
+import { staggerContainer } from '../animations/motion';
 import Logo from '../components/Logo';
 import NovaAvatar from '../components/NovaAvatar';
 import EmailAuthModal from '../components/EmailAuthModal';
+import GoogleIcon from '../components/GoogleIcon';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { register: authRegister, loginOAuthMock } = useAuth();
+  const { register: authRegister } = useAuth();
   
   const [loading, setLoading] = useState(false);
   const [savedEmail, setSavedEmail] = useState('');
@@ -35,44 +36,17 @@ const RegisterPage = () => {
     }
   };
 
-  const handleOAuthRegister = async (provider) => {
-    if (provider === 'google') {
-      window.location.href = '/api/auth/google';
-      return;
-    }
-
-    setLoading(true);
-    let mockEmail = '';
-    let mockName = '';
-
-    if (provider === 'facebook') {
-      mockEmail = 'john.facebook@fb.com';
-      mockName = 'John Doe (Facebook)';
-    } else if (provider === 'apple') {
-      mockEmail = 'john.apple@icloud.com';
-      mockName = 'John Doe (Apple)';
-    }
-
-    const result = await loginOAuthMock(provider, mockEmail, mockName);
-    setLoading(false);
-    if (result.success) {
-      navigate('/dashboard');
-    }
+  const handleGoogleRegister = () => {
+    window.location.href = '/api/auth/google';
   };
 
   React.useEffect(() => {
-    const handleVoiceGoogle = () => handleOAuthRegister('google');
-    const handleVoiceApple = () => handleOAuthRegister('apple');
-    const handleVoiceFacebook = () => handleOAuthRegister('facebook');
+    const handleVoiceGoogle = () => handleGoogleRegister();
 
     window.addEventListener('voice_oauth_google', handleVoiceGoogle);
-    window.addEventListener('voice_oauth_apple', handleVoiceApple);
-    window.addEventListener('voice_oauth_facebook', handleVoiceFacebook);
 
     return () => {
       window.removeEventListener('voice_oauth_google', handleVoiceGoogle);
-      window.removeEventListener('voice_oauth_apple', handleVoiceApple);
-      window.removeEventListener('voice_oauth_facebook', handleVoiceFacebook);
     };
   }, []);
 
@@ -113,27 +87,11 @@ const RegisterPage = () => {
             {/* Social Actions */}
             <div className="space-y-3">
               <button
-                onClick={() => handleOAuthRegister('google')}
+                onClick={handleGoogleRegister}
                 className="w-full py-3 px-4 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-xl flex items-center justify-start gap-4 transition-all shadow-sm cursor-pointer"
               >
-                <Chrome className="w-5 h-5 text-red-500" />
+                <GoogleIcon className="w-5 h-5" />
                 <span className="text-xs font-semibold text-zinc-700">Continue with Google</span>
-              </button>
-
-              <button
-                onClick={() => handleOAuthRegister('facebook')}
-                className="w-full py-3 px-4 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-xl flex items-center justify-start gap-4 transition-all shadow-sm cursor-pointer"
-              >
-                <Facebook className="w-5 h-5 text-blue-600 fill-blue-600" />
-                <span className="text-xs font-semibold text-zinc-700">Continue with Facebook</span>
-              </button>
-
-              <button
-                onClick={() => handleOAuthRegister('apple')}
-                className="w-full py-3 px-4 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-xl flex items-center justify-start gap-4 transition-all shadow-sm cursor-pointer"
-              >
-                <Apple className="w-5 h-5 text-black fill-black" />
-                <span className="text-xs font-semibold text-zinc-700">Continue with Apple</span>
               </button>
             </div>
 
@@ -147,7 +105,7 @@ const RegisterPage = () => {
             {/* Registration inputs */}
             <form onSubmit={infoForm.handleSubmit(onInfoSubmit)} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Full Name</label>
+                <label className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider"> Name</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                     <User className="w-4 h-4" />
@@ -156,7 +114,7 @@ const RegisterPage = () => {
                     type="text"
                     {...infoForm.register('name')}
                     className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-zinc-200 bg-white text-zinc-800 text-sm focus:outline-none focus:border-indigo-500 transition-colors"
-                    placeholder="Enter your full name"
+                    placeholder="Enter your name"
                   />
                 </div>
                 {infoForm.formState.errors.name && (
@@ -300,3 +258,5 @@ const RegisterPage = () => {
 };
 
 export default RegisterPage;
+
+

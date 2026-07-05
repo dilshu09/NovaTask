@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
@@ -15,6 +15,9 @@ import {
   FolderOpen,
   Flag,
   Play,
+  Pause,
+  RotateCcw,
+  Timer,
   Lightbulb,
   Coffee,
   Calendar as CalendarIcon,
@@ -193,6 +196,216 @@ const DashboardPage = () => {
   // Filter tasks for "Today's Plan" display (first 6 items)
   const todaysPlanTasks = tasks.slice(0, 6);
 
+  // =============================================
+  // FOCUS MODE — Real Pomodoro Timer
+  // =============================================
+  const FOCUS_PRESETS = [
+    { label: 'Focus', minutes: 25 },
+    { label: 'Short Break', minutes: 5 },
+    { label: 'Long Break', minutes: 15 }
+  ];
+  const [focusPreset, setFocusPreset] = useState(0);
+  const [focusSecondsLeft, setFocusSecondsLeft] = useState(FOCUS_PRESETS[0].minutes * 60);
+  const [focusRunning, setFocusRunning] = useState(false);
+  const [focusTotalSessions, setFocusTotalSessions] = useState(0);
+  const focusIntervalRef = useRef(null);
+
+  const focusTotalSeconds = FOCUS_PRESETS[focusPreset].minutes * 60;
+  const focusProgress = ((focusTotalSeconds - focusSecondsLeft) / focusTotalSeconds) * 100;
+  const focusDashArray = 2 * Math.PI * 62; // circumference for r=62
+  const focusDashOffset = focusDashArray - (focusDashArray * focusProgress) / 100;
+
+  const formatTimer = (totalSec) => {
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  useEffect(() => {
+    if (focusRunning && focusSecondsLeft > 0) {
+      focusIntervalRef.current = setInterval(() => {
+        setFocusSecondsLeft(prev => {
+          if (prev <= 1) {
+            clearInterval(focusIntervalRef.current);
+            setFocusRunning(false);
+            setFocusTotalSessions(s => s + 1);
+            toast.success(`${FOCUS_PRESETS[focusPreset].label} session complete! 🎉`);
+            // Play a subtle notification sound
+            try {
+              const ctx = new (window.AudioContext || window.webkitAudioContext)();
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.connect(gain); gain.connect(ctx.destination);
+              osc.frequency.value = 800; gain.gain.value = 0.3;
+              osc.start(); osc.stop(ctx.currentTime + 0.3);
+            } catch (e) {}
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(focusIntervalRef.current);
+  }, [focusRunning, focusPreset]);
+
+  const handleFocusToggle = () => {
+    if (focusSecondsLeft === 0) {
+      // Reset and start
+      setFocusSecondsLeft(FOCUS_PRESETS[focusPreset].minutes * 60);
+      setFocusRunning(true);
+    } else {
+      setFocusRunning(prev => !prev);
+    }
+  };
+
+  const handleFocusReset = () => {
+    clearInterval(focusIntervalRef.current);
+    setFocusRunning(false);
+    setFocusSecondsLeft(FOCUS_PRESETS[focusPreset].minutes * 60);
+  };
+
+  const handleFocusPresetChange = (idx) => {
+    clearInterval(focusIntervalRef.current);
+    setFocusRunning(false);
+    setFocusPreset(idx);
+    setFocusSecondsLeft(FOCUS_PRESETS[idx].minutes * 60);
+  };
+
+  // =============================================
+  // AI SUGGESTIONS — Dynamic data-driven insights
+  // =============================================
+  const generateSuggestions = useCallback(() => {
+    const suggestions = [];
+    const now = new Date();
+    const overdueTasks = tasks.filter(t => t.dueDate && new Date(t.dueDate) < now && t.status !== 'done');
+    const highPriorityPending = tasks.filter(t => t.priority === 'high' && t.status !== 'done');
+    const todoPending = tasks.filter(t => t.status === 'todo');
+    const total = tasks.length;
+    const done = tasks.filter(t => t.status === 'done').length;
+    const rate = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    // Overdue alert
+    if (overdueTasks.length > 0) {
+      suggestions.push({
+        icon: 'alert',
+        color: 'red',
+        text: `You have ${overdueTasks.length} overdue task${overdueTasks.length > 1 ? 's' : ''}. Tackle "${overdueTasks[0].title}" first!`
+      });
+    }
+
+    // High priority guidance
+    if (highPriorityPending.length > 0) {
+      suggestions.push({
+        icon: 'flag',
+        color: 'amber',
+        text: `${highPriorityPending.length} high-priority task${highPriorityPending.length > 1 ? 's' : ''} pending. Focus on "${highPriorityPending[0].title}" to stay on track.`
+      });
+    }
+
+    // Productivity insight
+    if (rate >= 80) {
+      suggestions.push({
+        icon: 'trending',
+        color: 'emerald',
+        text: `Incredible! You've completed ${rate}% of tasks. You're on a productive streak! 🔥`
+      });
+    } else if (rate >= 40 && rate < 80) {
+      suggestions.push({
+        icon: 'trending',
+        color: 'blue',
+        text: `Good progress at ${rate}% completion. Try completing ${Math.min(3, todoPending.length)} more tasks today!`
+      });
+    } else if (total > 0 && rate < 40) {
+      suggestions.push({
+        icon: 'lightbulb',
+        color: 'amber',
+        text: `Your completion rate is ${rate}%. Start with small tasks to build momentum.`
+      });
+    }
+
+    // Category workload
+    const catCounts = {};
+    tasks.filter(t => t.status !== 'done').forEach(t => {
+      catCounts[t.category || 'general'] = (catCounts[t.category || 'general'] || 0) + 1;
+    });
+    const topCat = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0];
+    if (topCat && topCat[1] >= 2) {
+      suggestions.push({
+        icon: 'compass',
+        color: 'purple',
+        text: `Most of your pending work is in ${topCat[0].charAt(0).toUpperCase() + topCat[0].slice(1)} (${topCat[1]} tasks). Consider batching them.`
+      });
+    }
+
+    // Upcoming deadline
+    const upcoming = tasks.filter(t => t.dueDate && t.status !== 'done' && new Date(t.dueDate) > now)
+      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))[0];
+    if (upcoming) {
+      const diffDays = Math.ceil((new Date(upcoming.dueDate) - now) / (1000 * 60 * 60 * 24));
+      if (diffDays <= 2) {
+        suggestions.push({
+          icon: 'clock',
+          color: 'blue',
+          text: `"${upcoming.title}" is due ${diffDays === 0 ? 'today' : diffDays === 1 ? 'tomorrow' : 'in 2 days'}. Plan some time for it.`
+        });
+      }
+    }
+
+    // Focus session suggestion
+    if (focusTotalSessions === 0 && total > 0) {
+      suggestions.push({
+        icon: 'coffee',
+        color: 'indigo',
+        text: 'Try a 25-minute Focus Session to boost deep work on your top task.'
+      });
+    } else if (focusTotalSessions > 0) {
+      suggestions.push({
+        icon: 'coffee',
+        color: 'emerald',
+        text: `You've completed ${focusTotalSessions} focus session${focusTotalSessions > 1 ? 's' : ''} today. Great discipline! 💪`
+      });
+    }
+
+    // Empty state
+    if (suggestions.length === 0) {
+      suggestions.push({
+        icon: 'sparkle',
+        color: 'indigo',
+        text: 'Create some tasks to get personalized AI suggestions and productivity insights!'
+      });
+    }
+
+    return suggestions.slice(0, 4);
+  }, [tasks, focusTotalSessions]);
+
+  const aiSuggestions = generateSuggestions();
+
+  const getSuggestionIcon = (icon, colorClass) => {
+    const iconMap = {
+      alert: <AlertCircle className={`w-4 h-4 ${colorClass} mt-0.5 shrink-0`} />,
+      flag: <Flag className={`w-4 h-4 ${colorClass} mt-0.5 shrink-0`} />,
+      trending: <TrendingUp className={`w-4 h-4 ${colorClass} mt-0.5 shrink-0`} />,
+      lightbulb: <Lightbulb className={`w-4 h-4 ${colorClass} mt-0.5 shrink-0`} />,
+      compass: <Compass className={`w-4 h-4 ${colorClass} mt-0.5 shrink-0`} />,
+      clock: <Clock className={`w-4 h-4 ${colorClass} mt-0.5 shrink-0`} />,
+      coffee: <Coffee className={`w-4 h-4 ${colorClass} mt-0.5 shrink-0`} />,
+      sparkle: <Sparkles className={`w-4 h-4 ${colorClass} mt-0.5 shrink-0`} />,
+    };
+    return iconMap[icon] || <Lightbulb className={`w-4 h-4 ${colorClass} mt-0.5 shrink-0`} />;
+  };
+
+  const getSuggestionStyles = (color) => {
+    const styles = {
+      red: { bg: 'bg-red-50/50 dark:bg-red-500/10', border: 'border-red-100/40 dark:border-red-500/20', iconColor: 'text-red-500', textColor: 'text-red-800 dark:text-red-300' },
+      amber: { bg: 'bg-amber-50/50 dark:bg-amber-500/10', border: 'border-amber-100/40 dark:border-amber-500/20', iconColor: 'text-amber-500', textColor: 'text-amber-800 dark:text-amber-300' },
+      blue: { bg: 'bg-blue-50/50 dark:bg-blue-500/10', border: 'border-blue-100/40 dark:border-blue-500/20', iconColor: 'text-blue-500', textColor: 'text-blue-800 dark:text-blue-300' },
+      emerald: { bg: 'bg-emerald-50/50 dark:bg-emerald-500/10', border: 'border-emerald-100/40 dark:border-emerald-500/20', iconColor: 'text-emerald-500', textColor: 'text-emerald-800 dark:text-emerald-300' },
+      purple: { bg: 'bg-purple-50/50 dark:bg-purple-500/10', border: 'border-purple-100/40 dark:border-purple-500/20', iconColor: 'text-purple-500', textColor: 'text-purple-800 dark:text-purple-300' },
+      indigo: { bg: 'bg-indigo-50/50 dark:bg-indigo-500/10', border: 'border-indigo-100/40 dark:border-indigo-500/20', iconColor: 'text-indigo-500', textColor: 'text-indigo-800 dark:text-indigo-300' },
+    };
+    return styles[color] || styles.blue;
+  };
+
   // Dynamic calendar generator for current month
   const generateCalendarDays = () => {
     const now = new Date();
@@ -368,82 +581,136 @@ const DashboardPage = () => {
           </div>
         </motion.div>
 
-        {/* Panel 2: Focus Mode */}
+        {/* Panel 2: Focus Mode — Real Pomodoro Timer */}
         <motion.div variants={slideUp} className="bg-white p-5 rounded-2xl border border-zinc-100 shadow-sm flex flex-col justify-between min-h-[360px] relative overflow-hidden">
           
           <div className="relative z-10">
-            <h3 className="font-display font-bold text-sm text-black">Focus Mode</h3>
-            <span className="text-[10px] text-zinc-400 font-light">Improve your concentration</span>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-display font-bold text-sm text-black">Focus Mode</h3>
+                <span className="text-[10px] text-zinc-400 font-light">Improve your concentration</span>
+              </div>
+              {focusTotalSessions > 0 && (
+                <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                  {focusTotalSessions} done
+                </span>
+              )}
+            </div>
+
+            {/* Preset tabs */}
+            <div className="flex gap-1.5 mt-3">
+              {FOCUS_PRESETS.map((p, idx) => (
+                <button
+                  key={p.label}
+                  onClick={() => handleFocusPresetChange(idx)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                    focusPreset === idx
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                      : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Core Circular Progress timer visual */}
-          <div className="relative flex flex-col items-center justify-center z-10">
-            <div className="w-36 h-36 rounded-full flex flex-col items-center justify-center border-4 border-indigo-50 bg-indigo-500/[0.01] shadow-[0_4px_24px_rgba(99,102,241,0.06)] relative">
-              <div className="absolute inset-0 rounded-full border-4 border-indigo-500 border-t-transparent transform rotate-45" />
-              <span className="font-display font-extrabold text-2xl text-black">25:00</span>
-              <button className="absolute bottom-[-10px] w-9 h-9 rounded-full bg-[#5045e4] hover:bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/35 border border-white/20 cursor-pointer">
-                <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
+          {/* Circular Progress Timer */}
+          <div className="relative flex flex-col items-center justify-center z-10 py-2">
+            <div className="relative w-36 h-36">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 140 140">
+                <circle cx="70" cy="70" r="62" fill="none" stroke="currentColor" strokeWidth="6" className="text-zinc-100 dark:text-zinc-800" />
+                <circle 
+                  cx="70" cy="70" r="62" fill="none" 
+                  stroke="url(#focusGradient)" 
+                  strokeWidth="6" 
+                  strokeLinecap="round"
+                  strokeDasharray={focusDashArray}
+                  strokeDashoffset={focusDashOffset}
+                  className="transition-all duration-1000 ease-linear"
+                />
+                <defs>
+                  <linearGradient id="focusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#6366f1" />
+                    <stop offset="100%" stopColor="#a855f7" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="font-display font-extrabold text-2xl text-black tracking-tight">
+                  {formatTimer(focusSecondsLeft)}
+                </span>
+                <span className="text-[9px] text-zinc-400 font-medium mt-0.5">
+                  {FOCUS_PRESETS[focusPreset].label}
+                </span>
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center gap-3 mt-3">
+              <button
+                onClick={handleFocusReset}
+                className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 flex items-center justify-center text-zinc-500 transition-colors cursor-pointer"
+                title="Reset"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={handleFocusToggle}
+                className={`w-11 h-11 rounded-full flex items-center justify-center shadow-lg border border-white/20 cursor-pointer transition-all ${
+                  focusRunning 
+                    ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/30' 
+                    : 'bg-[#5045e4] hover:bg-indigo-600 shadow-indigo-600/35'
+                }`}
+              >
+                {focusRunning 
+                  ? <Pause className="w-4 h-4 text-white fill-white" /> 
+                  : <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+                }
               </button>
             </div>
           </div>
 
-          {/* Plant & wave decoration vector styling */}
-          <div className="absolute bottom-0 inset-x-0 h-16 pointer-events-none z-0">
-            <svg className="w-full h-full text-indigo-50" viewBox="0 0 100 30" preserveAspectRatio="none">
+          {/* Bottom wave decoration */}
+          <div className="absolute bottom-0 inset-x-0 h-12 pointer-events-none z-0">
+            <svg className="w-full h-full text-indigo-50 dark:text-indigo-950/30" viewBox="0 0 100 30" preserveAspectRatio="none">
               <path d="M0,25 C30,15 60,35 100,20 L100,30 L0,30 Z" fill="currentColor" opacity="0.3" />
               <path d="M0,20 C40,30 70,10 100,25 L100,30 L0,30 Z" fill="currentColor" opacity="0.5" />
             </svg>
-            <div className="absolute bottom-1 right-4 w-7 h-10 flex flex-col justify-end">
-              <div className="w-1.5 h-3 bg-amber-700/60 rounded-t mx-auto" />
-              <div className="flex justify-center -space-x-1">
-                <div className="w-3.5 h-3.5 bg-emerald-500 rounded-full" />
-                <div className="w-3.5 h-3.5 bg-emerald-600 rounded-full" />
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t border-zinc-50 relative z-10">
-            <button className="text-xs font-bold text-indigo-600 flex items-center gap-1.5 cursor-pointer">
-              Start Focus Session
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
           </div>
 
         </motion.div>
 
-        {/* Panel 3: AI Suggestions */}
+        {/* Panel 3: AI Suggestions — Data-driven insights */}
         <motion.div variants={slideUp} className="bg-white p-5 rounded-2xl border border-zinc-100 shadow-sm flex flex-col justify-between min-h-[360px]">
           <div>
-            <h3 className="font-display font-bold text-sm text-black">AI Suggestions</h3>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-500" />
+              <h3 className="font-display font-bold text-sm text-black">AI Suggestions</h3>
+            </div>
             <span className="text-[10px] text-zinc-400 font-light">Nova has some ideas for you</span>
 
-            {/* Suggestion cards */}
+            {/* Dynamic suggestion cards */}
             <div className="space-y-2.5 mt-4">
-              <div className="p-3 rounded-xl bg-blue-50/50 border border-blue-100/40 flex items-start gap-2.5">
-                <TrendingUp className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-                <p className="text-[10px] text-blue-900 leading-normal font-medium">
-                  You work best between <span className="font-bold">9:00 AM - 11:00 AM</span>
-                </p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-amber-50/50 border border-amber-100/40 flex items-start gap-2.5">
-                <Lightbulb className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                <p className="text-[10px] text-amber-900 leading-normal font-medium">
-                  Try completing high priority tasks in the morning
-                </p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-red-50/50 border border-red-100/40 flex items-start gap-2.5">
-                <Coffee className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                <p className="text-[10px] text-red-900 leading-normal font-medium">
-                  Time to take a break? You've been focused for 2h
-                </p>
-              </div>
+              {aiSuggestions.map((suggestion, idx) => {
+                const styles = getSuggestionStyles(suggestion.color);
+                return (
+                  <div key={idx} className={`p-3 rounded-xl ${styles.bg} border ${styles.border} flex items-start gap-2.5`}>
+                    {getSuggestionIcon(suggestion.icon, styles.iconColor)}
+                    <p className={`text-[10px] ${styles.textColor} leading-normal font-medium`}>
+                      {suggestion.text}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          <div className="pt-4 border-t border-zinc-50">
-            <button className="text-xs font-bold text-indigo-600 flex items-center gap-1.5 cursor-pointer">
+          <div className="pt-4 border-t border-zinc-50 dark:border-zinc-800">
+            <button 
+              onClick={() => navigate('/dashboard/tasks')}
+              className="text-xs font-bold text-indigo-600 flex items-center gap-1.5 cursor-pointer hover:text-indigo-500 transition-colors"
+            >
               View all insights
               <ArrowRight className="w-3.5 h-3.5" />
             </button>

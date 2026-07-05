@@ -1,61 +1,32 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, LogIn, Chrome, Apple, Facebook, Sparkles, Mic, MicOff, ShieldAlert, KeyRound, Check, ArrowRight } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { motion } from 'framer-motion';
+import { Mail, Mic, MicOff, ShieldAlert } from 'lucide-react';
 import { useVoice } from '../contexts/VoiceContext';
-import { slideUp, staggerContainer, scaleIn } from '../animations/motion';
+import { staggerContainer } from '../animations/motion';
 import Logo from '../components/Logo';
 import NovaAvatar from '../components/NovaAvatar';
 import EmailAuthModal from '../components/EmailAuthModal';
+import GoogleIcon from '../components/GoogleIcon';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { loginOAuthMock } = useAuth();
   const { startListening, stopListening, voiceState, voiceMessage } = useVoice();
-  const [loading, setLoading] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
-  const handleOAuthLogin = async (provider) => {
-    if (provider === 'google') {
-      window.location.href = '/api/auth/google';
-      return;
-    }
-
-    setLoading(true);
-    let mockEmail = '';
-    let mockName = '';
-
-    if (provider === 'facebook') {
-      mockEmail = 'john.facebook@fb.com';
-      mockName = 'John Doe (Facebook)';
-    } else if (provider === 'apple') {
-      mockEmail = 'john.apple@icloud.com';
-      mockName = 'John Doe (Apple)';
-    }
-
-    const result = await loginOAuthMock(provider, mockEmail, mockName);
-    setLoading(false);
-    if (result.success) {
-      navigate('/dashboard');
-    }
+  const handleGoogleLogin = () => {
+    window.location.href = '/api/auth/google';
   };
 
   React.useEffect(() => {
-    const handleVoiceGoogle = () => handleOAuthLogin('google');
-    const handleVoiceApple = () => handleOAuthLogin('apple');
-    const handleVoiceFacebook = () => handleOAuthLogin('facebook');
+    const handleVoiceGoogle = () => handleGoogleLogin();
     const handleVoiceEmail = () => setIsEmailModalOpen(true);
 
     window.addEventListener('voice_oauth_google', handleVoiceGoogle);
-    window.addEventListener('voice_oauth_apple', handleVoiceApple);
-    window.addEventListener('voice_oauth_facebook', handleVoiceFacebook);
     window.addEventListener('voice_login_email', handleVoiceEmail);
 
     return () => {
       window.removeEventListener('voice_oauth_google', handleVoiceGoogle);
-      window.removeEventListener('voice_oauth_apple', handleVoiceApple);
-      window.removeEventListener('voice_oauth_facebook', handleVoiceFacebook);
       window.removeEventListener('voice_login_email', handleVoiceEmail);
     };
   }, []);
@@ -96,27 +67,11 @@ const LoginPage = () => {
           {/* Providers Lists */}
           <div className="space-y-3 pt-2">
             <button
-              onClick={() => handleOAuthLogin('google')}
+              onClick={handleGoogleLogin}
               className="w-full py-3 px-4 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-xl flex items-center justify-start gap-4 transition-all shadow-sm cursor-pointer"
             >
-              <Chrome className="w-5 h-5 text-red-500" />
+              <GoogleIcon className="w-5 h-5" />
               <span className="text-xs font-semibold text-zinc-700">Continue with Google</span>
-            </button>
-            
-            <button
-              onClick={() => handleOAuthLogin('apple')}
-              className="w-full py-3 px-4 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-xl flex items-center justify-start gap-4 transition-all shadow-sm cursor-pointer"
-            >
-              <Apple className="w-5 h-5 text-black fill-black" />
-              <span className="text-xs font-semibold text-zinc-700">Continue with Apple</span>
-            </button>
-            
-            <button
-              onClick={() => handleOAuthLogin('facebook')}
-              className="w-full py-3 px-4 bg-white border border-zinc-200 hover:bg-zinc-50 rounded-xl flex items-center justify-start gap-4 transition-all shadow-sm cursor-pointer"
-            >
-              <Facebook className="w-5 h-5 text-blue-600 fill-blue-600" />
-              <span className="text-xs font-semibold text-zinc-700">Continue with Facebook</span>
             </button>
 
             <button
@@ -216,3 +171,6 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
+
+
+
