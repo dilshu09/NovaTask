@@ -10,6 +10,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
+import dns from 'dns';
+dns.setServers(['8.8.8.8', '8.8.4.4']);
+
 // Setup Mock DB Connection and execute verification tests
 const runTests = async () => {
   console.log('--- NOVATASK BACKEND VERIFICATION SUITE ---\n');

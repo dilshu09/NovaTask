@@ -78,6 +78,10 @@ app.use('/voice', voiceRoutes);
 // Add a mock social login callback endpoint for testing
 app.post('/api/auth/oauth-mock', async (req, res, next) => {
   try {
+    if (process.env.NODE_ENV === 'production' && process.env.ALLOW_MOCK_AUTH !== 'true') {
+      return next(new ErrorResponse('Mock OAuth is disabled in production environments', 403));
+    }
+
     const { provider, email, name, id } = req.body;
     if (!email || !name) {
       return next(new ErrorResponse('OAuth email and name are required', 400));
