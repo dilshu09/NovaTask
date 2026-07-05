@@ -26,8 +26,13 @@ router.get('/google/callback', passport.authenticate('google', {
     const accessToken = generateAccessToken(req.user);
     const refreshToken = generateRefreshToken(req.user);
 
+    if (!req.user.refreshTokens || !Array.isArray(req.user.refreshTokens)) {
+      req.user.refreshTokens = [];
+    }
     req.user.refreshTokens.push(refreshToken);
-    await req.user.save();
+    if (typeof req.user.save === 'function') {
+      await req.user.save();
+    }
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
