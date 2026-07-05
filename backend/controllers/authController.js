@@ -387,20 +387,6 @@ export const getMe = async (req, res, next) => {
             avatar: user.avatar || null,
             role: 'owner',
             status: 'active'
-          },
-          {
-            name: 'Alex Chen',
-            email: 'alex@novatask.ai',
-            avatar: null,
-            role: 'editor',
-            status: 'active'
-          },
-          {
-            name: 'Sarah Jenkins',
-            email: 'sarah@novatask.ai',
-            avatar: null,
-            role: 'admin',
-            status: 'active'
           }
         ];
         await settings.save();
