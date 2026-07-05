@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && npm install --legacy-peer-deps && npm run build",
+  "buildCommand": "cd frontend && npm install --legacy-peer-deps --production=false && npm run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "npm install --legacy-peer-deps && cd backend && npm install --legacy-peer-deps && cd ../frontend && npm install --legacy-peer-deps",
+  "installCommand": "npm install --legacy-peer-deps --production=false && cd backend && npm install --legacy-peer-deps --production=false && cd ../frontend && npm install --legacy-peer-deps --production=false",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/server.js" },
     { "source": "/((?!assets|logo\\.png|favicon\\.ico).*)", "destination": "/index.html" }
