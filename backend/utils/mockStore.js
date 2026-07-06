@@ -19,17 +19,10 @@ export const createUser = async (userObj) => {
     _id: `mock_user_${Date.now()}`,
     name: userObj.name,
     email: userObj.email.toLowerCase(),
-    password: userObj.password, // plain text or pre-hashed
     isVerified: userObj.isVerified || false,
     googleId: userObj.googleId || null,
-    facebookId: userObj.facebookId || null,
-    appleId: userObj.appleId || null,
     refreshTokens: [],
     createdAt: new Date(),
-    matchPassword: async function(entered) {
-      // Direct string comparison for mock testing
-      return entered === this.password;
-    }
   };
   users.push(newUser);
   return newUser;
@@ -252,7 +245,6 @@ const init = async () => {
   const testUser = await createUser({
     name: 'Pasindu D.',
     email: 'admin@novatask.ai',
-    password: 'password123',
     isVerified: true
   });
   testUser._id = 'mock_pasindu_id_123'; // Static ID for convenience

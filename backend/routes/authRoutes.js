@@ -3,7 +3,6 @@ import passport from 'passport';
 import {
   register,
   verifyOtp,
-  login,
   loginSendOtp,
   loginVerifyOtp,
   refresh,
@@ -51,7 +50,6 @@ router.get('/google/callback', passport.authenticate('google', {
 // Public Auth Endpoints with rate-limiting
 router.post('/register', authLimiter, register);
 router.post('/verify-otp', authLimiter, verifyOtp);
-router.post('/login', authLimiter, login);
 router.post('/login/send-otp', authLimiter, loginSendOtp);
 router.post('/login/verify-otp', authLimiter, loginVerifyOtp);
 router.post('/refresh', refresh);

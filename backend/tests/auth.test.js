@@ -4,7 +4,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import User from '../models/User.js';
 import UserSettings from '../models/UserSettings.js';
-import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,9 +48,8 @@ const runTests = async () => {
     }
     console.log('OTP verification matched successfully!\n');
 
-    // 4. Test Step 3: Password Completion and Save
-    console.log('[Test 3] Configuring secure password and completing registration...');
-    foundUser.password = 'supersecretpassword123';
+    // 4. Test Step 3: Registration Completion and Settings Initialization
+    console.log('[Test 3] Completing registration and initializing settings...');
     foundUser.isVerified = true;
     foundUser.otp = undefined; // clear OTP
     await foundUser.save();
@@ -60,20 +58,13 @@ const runTests = async () => {
     await UserSettings.create({ user: foundUser._id });
 
     console.log(`Account verified. IsVerified: ${foundUser.isVerified}`);
-    const passwordCheck = await foundUser.matchPassword('supersecretpassword123');
-    console.log(`Password encryption check: ${passwordCheck ? 'Passed (Hashed correctly)' : 'Failed'}\n`);
-
-    // 5. Test Step 4: Login Check
-    console.log('[Test 4] Simulating Login request authentication...');
-    const loginUser = await User.findOne({ email: 'test.developer@novatask.ai' }).select('+password');
-    if (!loginUser) {
-      throw new Error('User not found during login');
+    
+    // Validate Settings Exist
+    const userSettings = await UserSettings.findOne({ user: foundUser._id });
+    if (!userSettings) {
+      throw new Error('UserSettings record was not created successfully.');
     }
-    const loginSuccess = await loginUser.matchPassword('supersecretpassword123');
-    if (!loginSuccess) {
-      throw new Error('Invalid login credentials: password mismatch');
-    }
-    console.log('Login authenticated successfully!\n');
+    console.log('UserSettings initialized successfully!\n');
 
     console.log('--- ALL INTEGRATION TESTS COMPLETED SUCCESSFULLY ---');
   } catch (error) {

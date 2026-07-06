@@ -89,7 +89,7 @@ export const localIntentParser = (text, context) => {
       response: 'Confirming. Redirecting to registration.'
     };
   }
-  if (query.includes('go to login') || query.includes('open login') || (query.includes('sign in') && !query.includes('workspace') && !query.includes('google') && !query.includes('facebook') && !query.includes('apple'))) {
+  if (query.includes('go to login') || query.includes('open login') || (query.includes('sign in') && !query.includes('workspace') && !query.includes('google'))) {
     return {
       action: 'navigatePage',
       parameters: { page: 'login' },
@@ -105,20 +105,7 @@ export const localIntentParser = (text, context) => {
       response: 'Confirming. Logging in with Google.'
     };
   }
-  if (query.includes('login with apple') || query.includes('continue with apple') || query.includes('sign in with apple')) {
-    return {
-      action: 'loginOAuth',
-      parameters: { provider: 'apple' },
-      response: 'Confirming. Logging in with Apple.'
-    };
-  }
-  if (query.includes('login with facebook') || query.includes('continue with facebook') || query.includes('sign in with facebook')) {
-    return {
-      action: 'loginOAuth',
-      parameters: { provider: 'facebook' },
-      response: 'Confirming. Logging in with Facebook.'
-    };
-  }
+
 
   if (query.includes('login with email') || query.includes('continue with email') || query.includes('sign in with email') || query.includes('login email')) {
     return {
@@ -433,7 +420,7 @@ export const processVoiceCommand = async (req, res, next) => {
                 parameters: {
                   type: 'OBJECT',
                   properties: {
-                    provider: { type: 'STRING', enum: ['google', 'apple', 'facebook'], description: 'The provider name.' }
+                    provider: { type: 'STRING', enum: ['google'], description: 'The provider name.' }
                   },
                   required: ['provider']
                 }

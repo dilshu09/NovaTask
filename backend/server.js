@@ -100,7 +100,7 @@ app.post('/api/auth/oauth-mock', async (req, res, next) => {
 
     if (!user) {
       // Create user
-      const providerField = provider === 'google' ? 'googleId' : provider === 'facebook' ? 'facebookId' : 'appleId';
+      const providerField = 'googleId';
       
       if (isDbConnected) {
         user = await User.create({

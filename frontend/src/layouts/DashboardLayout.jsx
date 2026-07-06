@@ -145,7 +145,7 @@ const DashboardLayout = () => {
         
         <div className="space-y-8">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 px-2">
+          <Link to="/dashboard" className="flex items-center gap-2.5 px-2">
             <Logo className="w-8 h-8" />
             <div className="flex flex-col -space-y-1">
               <span className="font-display font-bold text-base text-white tracking-tight">
@@ -269,7 +269,7 @@ const DashboardLayout = () => {
 
       {/* Header - Mobile Layout */}
       <header className="md:hidden w-full px-6 py-4 border-b border-zinc-200 bg-white flex items-center justify-between z-20">
-        <Link to="/" className="flex items-center gap-2">
+        <Link to="/dashboard" className="flex items-center gap-2">
           <Logo className="w-7 h-7" />
           <span className="font-display font-bold tracking-tight text-black text-sm">
             NOVATASK

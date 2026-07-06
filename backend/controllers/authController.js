@@ -3,7 +3,7 @@ import User from '../models/User.js';
 import UserSettings from '../models/UserSettings.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
 import { ErrorResponse } from '../middleware/errorMiddleware.js';
-import { registerSchema, verifyOtpSchema, loginSchema, loginSendOtpSchema, loginVerifyOtpSchema } from '../validators/authValidator.js';
+import { registerSchema, verifyOtpSchema, loginSendOtpSchema, loginVerifyOtpSchema } from '../validators/authValidator.js';
 import ActivityLog from '../models/ActivityLog.js';
 import Notification from '../models/Notification.js';
 import * as mockStore from '../utils/mockStore.js';
@@ -59,7 +59,6 @@ export const register = async (req, res, next) => {
         user = await mockStore.createUser({
           name,
           email,
-          password: '',
           isVerified: false,
         });
         user.otp = { code: otpCode, expiresAt: otpExpires };
@@ -176,82 +175,6 @@ export const verifyOtp = async (req, res, next) => {
 };
 
 
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
-export const login = async (req, res, next) => {
-  try {
-    const validation = loginSchema.safeParse(req.body);
-    if (!validation.success) {
-      const errorMsg = validation.error.errors.map(err => err.message).join(', ');
-      return next(new ErrorResponse(errorMsg, 400));
-    }
-
-    const { email, password } = validation.data;
-    const isDbConnected = mongoose.connection.readyState === 1;
-
-    let user;
-    if (isDbConnected) {
-      user = await User.findOne({ email }).select('+password');
-    } else {
-      user = await mockStore.findUserByEmail(email);
-    }
-
-    if (!user) {
-      return next(new ErrorResponse('Invalid credentials', 401));
-    }
-
-    if (!user.isVerified) {
-      return next(new ErrorResponse('Please verify your email before logging in', 400));
-    }
-
-    const isMatch = isDbConnected 
-      ? await user.matchPassword(password)
-      : password === user.password; // direct mock match
-
-    if (!isMatch) {
-      return next(new ErrorResponse('Invalid credentials', 401));
-    }
-
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-
-    user.refreshTokens.push(refreshToken);
-
-    if (isDbConnected) {
-      await user.save();
-      await ActivityLog.create({
-        user: user._id,
-        action: 'user_login',
-        details: 'User logged in successfully.',
-      });
-    } else {
-      await mockStore.saveUser(user);
-      await mockStore.createActivity(user._id, 'user_login', 'User logged in successfully.');
-    }
-
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    res.status(200).json({
-      success: true,
-      accessToken,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        avatar: user.avatar || '',
-        isVerified: user.isVerified,
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 // @desc    Refresh access token
 // @route   POST /api/auth/refresh
