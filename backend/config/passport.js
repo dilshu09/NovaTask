@@ -91,7 +91,7 @@ passport.deserializeUser(async (id, done) => {
   try {
     const isDbConnected = mongoose.connection.readyState === 1;
     let user;
-    if (isDbConnected) {
+    if (isDbConnected && mongoose.Types.ObjectId.isValid(id)) {
       user = await User.findById(id);
     } else {
       user = await mockStore.findUserById(id);

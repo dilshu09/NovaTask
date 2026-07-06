@@ -33,6 +33,9 @@ import passport from './config/passport.js';
 
 const app = express();
 
+// Trust proxy for Vercel / reverse proxies
+app.set('trust proxy', 1);
+
 // Initialize Passport
 app.use(passport.initialize());
 

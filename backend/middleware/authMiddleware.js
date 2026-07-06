@@ -27,7 +27,7 @@ export const protect = async (req, res, next) => {
     let user;
     const isDbConnected = mongoose.connection.readyState === 1;
 
-    if (isDbConnected) {
+    if (isDbConnected && mongoose.Types.ObjectId.isValid(decoded.id)) {
       user = await User.findById(decoded.id);
     } else {
       user = await mockStore.findUserById(decoded.id);
