@@ -330,3 +330,31 @@ export const updateMembers = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Delete user account
+// @route   DELETE /api/users
+// @access  Private
+export const deleteAccount = async (req, res, next) => {
+  try {
+    const isDbConnected = mongoose.connection.readyState === 1;
+
+    if (isDbConnected) {
+      const user = await User.findById(req.user._id);
+      if (!user) return next(new ErrorResponse('User not found', 404));
+      
+      // Cascade delete is handled by Mongoose schema middleware pre-hook
+      await user.deleteOne();
+    } else {
+      const deleted = await mockStore.deleteUser(req.user._id);
+      if (!deleted) return next(new ErrorResponse('User not found', 404));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Account and associated data deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

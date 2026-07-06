@@ -240,6 +240,46 @@ export const findPendingInvite = async (email) => {
   return settings.find(s => s.members && s.members.some(m => m.email.toLowerCase() === email.toLowerCase()));
 };
 
+export const deleteUser = async (userId) => {
+  const userIdx = users.findIndex(u => u._id === userId.toString());
+  if (userIdx === -1) return false;
+  
+  const user = users[userIdx];
+  const email = user.email;
+  
+  users.splice(userIdx, 1);
+  
+  const settingsIdx = settings.findIndex(s => s.user === userId.toString());
+  if (settingsIdx !== -1) settings.splice(settingsIdx, 1);
+  
+  let i = tasks.length;
+  while (i--) {
+    const t = tasks[i];
+    const isOwner = t.user === userId.toString();
+    const isAssignee = t.assignee && t.assignee.email && t.assignee.email.toLowerCase() === email.toLowerCase();
+    const isMember = t.assignees && t.assignees.some(a => a.email && a.email.toLowerCase() === email.toLowerCase());
+    if (isOwner || isAssignee || isMember) {
+      tasks.splice(i, 1);
+    }
+  }
+
+  let j = activities.length;
+  while (j--) {
+    if (activities[j].user === userId.toString()) {
+      activities.splice(j, 1);
+    }
+  }
+
+  let k = notifications.length;
+  while (k--) {
+    if (notifications[k].user === userId.toString()) {
+      notifications.splice(k, 1);
+    }
+  }
+  
+  return true;
+};
+
 // Pre-populate with standard mock user for testing (password: password123)
 const init = async () => {
   const testUser = await createUser({

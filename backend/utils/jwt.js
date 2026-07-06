@@ -1,10 +1,15 @@
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+
+export const hashToken = (token) => {
+  return crypto.createHash('sha256').update(token).digest('hex');
+};
 
 export const generateAccessToken = (user) => {
   return jwt.sign(
     { id: user._id, email: user.email },
     process.env.JWT_ACCESS_SECRET || 'novatask_access_secret_key_12345',
-    { expiresIn: '7d' }
+    { expiresIn: '1h' }
   );
 };
 

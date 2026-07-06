@@ -24,9 +24,18 @@ export const AuthProvider = ({ children }) => {
   // Check if user session is active on startup
   useEffect(() => {
     const checkSession = async () => {
-      // Check query params for Google OAuth redirect token first
+      // Check query params or client-readable cookie for Google OAuth redirect token first
       const params = new URLSearchParams(window.location.search);
-      const urlToken = params.get('token');
+      let urlToken = params.get('token');
+
+      // Check client-readable cookie first
+      const match = document.cookie.match(/(^|;)\s*oauthToken\s*=\s*([^;]+)/);
+      if (match) {
+        urlToken = match[2];
+        // Delete/expire the cookie immediately by setting its max-age to 0
+        document.cookie = 'oauthToken=; Path=/; Max-Age=0; SameSite=Lax';
+      }
+
       if (urlToken) {
         localStorage.setItem('accessToken', urlToken);
         // Clean URL parameter

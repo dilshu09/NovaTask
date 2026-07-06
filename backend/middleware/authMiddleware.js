@@ -21,7 +21,7 @@ export const protect = async (req, res, next) => {
   try {
     const decoded = jwt.verify(
       token,
-      process.env.JWT_ACCESS_SECRET || 'magadige_access_secret_key_12345'
+      process.env.JWT_ACCESS_SECRET || 'novatask_access_secret_key_12345'
     );
     
     let user;

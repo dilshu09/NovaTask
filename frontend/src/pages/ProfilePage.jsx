@@ -16,6 +16,7 @@ import {
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { slideUp, staggerContainer } from '../animations/motion';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const ProfilePage = () => {
   const { user, updateProfile } = useAuth();
@@ -24,6 +25,7 @@ const ProfilePage = () => {
   const [name, setName] = useState(user.name);
   const [avatar, setAvatar] = useState(user.avatar || '');
   const [savingProfile, setSavingProfile] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   // Lists States
   const [logs, setLogs] = useState([]);
@@ -82,6 +84,22 @@ const ProfilePage = () => {
       toast.success('Alert removed');
     } catch (e) {
       toast.error('Action failed');
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    setIsConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsConfirmOpen(false);
+    try {
+      await api.delete('/users');
+      toast.success('Account deleted successfully.');
+      localStorage.removeItem('accessToken');
+      window.location.href = '/login';
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Failed to delete account');
     }
   };
 
@@ -153,6 +171,19 @@ const ProfilePage = () => {
                 {savingProfile ? 'Saving...' : 'Update Profile'}
               </button>
             </form>
+
+            <div className="pt-6 border-t border-zinc-100 space-y-3">
+              <h4 className="text-xs font-semibold text-red-600 uppercase tracking-wider">Danger Zone</h4>
+              <p className="text-[11px] text-zinc-550 font-light">Deleting your account is permanent. It will delete your settings, activities, notifications, and tasks (including tasks assigned to you by others).</p>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                className="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-red-200"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete Account
+              </button>
+            </div>
 
             <div className="pt-4 border-t border-zinc-100 flex items-center gap-2 text-zinc-500 text-xs font-light">
               <Calendar className="w-4 h-4 text-zinc-500" />
@@ -270,6 +301,15 @@ const ProfilePage = () => {
 
       </div>
 
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Account?"
+        message="Are you sure you want to permanently delete your account? All your tasks, settings, activity logs, and collaborations will be permanently deleted."
+        confirmText="Delete Account"
+        type="danger"
+      />
     </motion.div>
   );
 };

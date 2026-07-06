@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
+import crypto from 'crypto';
 import User from '../models/User.js';
 import UserSettings from '../models/UserSettings.js';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken, hashToken } from '../utils/jwt.js';
 import { ErrorResponse } from '../middleware/errorMiddleware.js';
 import { registerSchema, verifyOtpSchema, loginSendOtpSchema, loginVerifyOtpSchema } from '../validators/authValidator.js';
 import ActivityLog from '../models/ActivityLog.js';
@@ -9,8 +10,11 @@ import Notification from '../models/Notification.js';
 import * as mockStore from '../utils/mockStore.js';
 import { sendEmail } from '../utils/email.js';
 
-// Helper to generate 6-digit OTP
-const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+// Helper to generate 6-digit OTP securely
+const generateOTP = () => crypto.randomInt(100000, 1000000).toString();
+
+// Helper to hash OTP code using SHA-256
+const hashOTP = (otp) => crypto.createHash('sha256').update(otp).digest('hex');
 
 // @desc    Register a user (Step 1: Name and Email, sends OTP)
 // @route   POST /api/auth/register
@@ -39,10 +43,11 @@ export const register = async (req, res, next) => {
 
     const otpCode = generateOTP();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    const hashedOtp = hashOTP(otpCode);
 
     if (user) {
       user.name = name;
-      user.otp = { code: otpCode, expiresAt: otpExpires };
+      user.otp = { code: hashedOtp, expiresAt: otpExpires };
       if (isDbConnected) {
         await user.save();
       } else {
@@ -53,7 +58,7 @@ export const register = async (req, res, next) => {
         user = await User.create({
           name,
           email,
-          otp: { code: otpCode, expiresAt: otpExpires },
+          otp: { code: hashedOtp, expiresAt: otpExpires },
         });
       } else {
         user = await mockStore.createUser({
@@ -61,7 +66,7 @@ export const register = async (req, res, next) => {
           email,
           isVerified: false,
         });
-        user.otp = { code: otpCode, expiresAt: otpExpires };
+        user.otp = { code: hashedOtp, expiresAt: otpExpires };
         await mockStore.saveUser(user);
       }
     }
@@ -119,7 +124,7 @@ export const verifyOtp = async (req, res, next) => {
       return next(new ErrorResponse('User not found', 404));
     }
 
-    if (!user.otp || user.otp.code !== otp || new Date() > user.otp.expiresAt) {
+    if (!user.otp || user.otp.code !== hashOTP(otp) || new Date() > user.otp.expiresAt) {
       return next(new ErrorResponse('Invalid or expired OTP code', 400));
     }
 
@@ -128,7 +133,7 @@ export const verifyOtp = async (req, res, next) => {
     user.otp = undefined;
 
     const refreshToken = generateRefreshToken(user);
-    user.refreshTokens = [refreshToken];
+    user.refreshTokens = [hashToken(refreshToken)];
 
     if (isDbConnected) {
       await user.save();
@@ -200,15 +205,18 @@ export const refresh = async (req, res, next) => {
       user = await mockStore.findUserById(decoded.id);
     }
 
-    if (!user || !user.refreshTokens.includes(refreshToken)) {
+    if (!user || !user.refreshTokens.includes(hashToken(refreshToken))) {
       return next(new ErrorResponse('Token is not active or user not found', 401));
     }
 
     const newAccessToken = generateAccessToken(user);
     const newRefreshToken = generateRefreshToken(user);
 
-    user.refreshTokens = user.refreshTokens.filter(t => t !== refreshToken);
-    user.refreshTokens.push(newRefreshToken);
+    user.refreshTokens = user.refreshTokens.filter(t => t !== hashToken(refreshToken));
+    user.refreshTokens.push(hashToken(newRefreshToken));
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens.shift();
+    }
 
     if (isDbConnected) {
       await user.save();
@@ -249,7 +257,7 @@ export const logout = async (req, res, next) => {
       }
       
       if (user) {
-        user.refreshTokens = user.refreshTokens.filter(t => t !== refreshToken);
+        user.refreshTokens = user.refreshTokens.filter(t => t !== hashToken(refreshToken));
         if (isDbConnected) {
           await user.save();
         } else {
@@ -385,8 +393,9 @@ export const loginSendOtp = async (req, res, next) => {
 
     const otpCode = generateOTP();
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    const hashedOtp = hashOTP(otpCode);
 
-    user.otp = { code: otpCode, expiresAt: otpExpires };
+    user.otp = { code: hashedOtp, expiresAt: otpExpires };
 
     if (isDbConnected) {
       await user.save();
@@ -447,7 +456,7 @@ export const loginVerifyOtp = async (req, res, next) => {
       return next(new ErrorResponse('User not found', 404));
     }
 
-    if (!user.otp || user.otp.code !== otp || new Date() > user.otp.expiresAt) {
+    if (!user.otp || user.otp.code !== hashOTP(otp) || new Date() > user.otp.expiresAt) {
       return next(new ErrorResponse('Invalid or expired OTP code', 400));
     }
 
@@ -456,7 +465,7 @@ export const loginVerifyOtp = async (req, res, next) => {
     user.otp = undefined;
 
     const refreshToken = generateRefreshToken(user);
-    user.refreshTokens = [refreshToken]; // Reset active refresh tokens list on new OTP verify for security
+    user.refreshTokens = [hashToken(refreshToken)]; // Reset active refresh tokens list on new OTP verify for security
 
     if (isDbConnected) {
       await user.save();

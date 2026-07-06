@@ -7,6 +7,7 @@ import {
   getNotifications,
   markNotificationRead,
   deleteNotification,
+  deleteAccount,
 } from '../controllers/userController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -16,6 +17,7 @@ const router = express.Router();
 router.use(protect);
 
 router.put('/profile', updateProfile);
+router.delete('/', deleteAccount);
 router.put('/settings', updateSettings);
 router.put('/settings/members', updateMembers);
 router.get('/activities', getActivityLogs);

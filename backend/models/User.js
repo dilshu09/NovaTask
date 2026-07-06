@@ -41,4 +41,46 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
+// Cascade delete user data (settings, tasks, activity logs, notifications)
+UserSchema.pre(['deleteOne', 'findOneAndDelete'], { document: true, query: true }, async function (next) {
+  try {
+    let userId;
+    let email;
+
+    if (this.getQuery) {
+      const query = this.getQuery();
+      userId = query._id;
+      if (userId) {
+        const user = await mongoose.model('User').findById(userId);
+        if (user) {
+          email = user.email;
+        }
+      }
+    } else {
+      userId = this._id;
+      email = this.email;
+    }
+
+    if (userId) {
+      const taskQuery = {
+        $or: [
+          { user: userId }
+        ]
+      };
+      if (email) {
+        taskQuery.$or.push({ 'assignee.email': email.toLowerCase() });
+        taskQuery.$or.push({ 'assignees.email': email.toLowerCase() });
+      }
+      await mongoose.model('Task').deleteMany(taskQuery);
+
+      await mongoose.model('UserSettings').deleteMany({ user: userId });
+      await mongoose.model('ActivityLog').deleteMany({ user: userId });
+      await mongoose.model('Notification').deleteMany({ user: userId });
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default mongoose.model('User', UserSchema);

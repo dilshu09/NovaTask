@@ -11,7 +11,7 @@ import {
 } from '../controllers/authController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
-import { generateAccessToken, generateRefreshToken } from '../utils/jwt.js';
+import { generateAccessToken, generateRefreshToken, hashToken } from '../utils/jwt.js';
 
 const router = express.Router();
 
@@ -28,7 +28,10 @@ router.get('/google/callback', passport.authenticate('google', {
     if (!req.user.refreshTokens || !Array.isArray(req.user.refreshTokens)) {
       req.user.refreshTokens = [];
     }
-    req.user.refreshTokens.push(refreshToken);
+    req.user.refreshTokens.push(hashToken(refreshToken));
+    if (req.user.refreshTokens.length > 5) {
+      req.user.refreshTokens.shift();
+    }
     if (typeof req.user.save === 'function') {
       await req.user.save();
     }
@@ -40,7 +43,14 @@ router.get('/google/callback', passport.authenticate('google', {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?token=${accessToken}`);
+    res.cookie('oauthToken', accessToken, {
+      httpOnly: false, // client JS needs to read it
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 120000, // 2 mins
+    });
+
+    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login`);
   } catch (error) {
     console.error('Google OAuth Callback Error:', error);
     res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=auth_failed`);
