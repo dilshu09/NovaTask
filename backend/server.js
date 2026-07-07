@@ -33,6 +33,16 @@ import passport from './config/passport.js';
 
 const app = express();
 
+// Ensure DB connection is alive for every request (especially for Serverless environments)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error('Database connection middleware error:', err);
+  }
+  next();
+});
+
 // Trust proxy for Vercel / reverse proxies
 app.set('trust proxy', 1);
 

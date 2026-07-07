@@ -26,6 +26,8 @@ export const protect = async (req, res, next) => {
     
     let user;
     const isDbConnected = mongoose.connection.readyState === 1;
+    
+    console.log(`[AUTH PROTECT] isDbConnected: ${isDbConnected}, decoded ID: ${decoded.id}`);
 
     if (isDbConnected && mongoose.Types.ObjectId.isValid(decoded.id)) {
       user = await User.findById(decoded.id);
@@ -36,6 +38,7 @@ export const protect = async (req, res, next) => {
     req.user = user;
     
     if (!req.user) {
+      console.log(`[AUTH PROTECT] User not found for ID: ${decoded.id}`);
       return next(new ErrorResponse('User no longer exists', 401));
     }
 
