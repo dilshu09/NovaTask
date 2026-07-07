@@ -43,7 +43,7 @@ export const register = async (req, res, next) => {
     }
 
     const otpCode = generateOTP();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    const otpExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
     const hashedOtp = hashOTP(otpCode);
 
     if (user) {
@@ -126,7 +126,14 @@ export const verifyOtp = async (req, res, next) => {
       return next(new ErrorResponse('User not found', 404));
     }
 
-    if (!user.otp || user.otp.code !== hashOTP(otp) || new Date() > user.otp.expiresAt) {
+    // Allow 10 minutes clock skew grace period between database and server
+    const clockSkewGraceMs = 10 * 60 * 1000;
+    const isExpired = user.otp ? (Date.now() - clockSkewGraceMs > new Date(user.otp.expiresAt).getTime()) : true;
+    const isCodeMatch = user.otp ? (user.otp.code === hashOTP(otp)) : false;
+
+    console.log(`[VERIFY OTP] Email: ${normalizedEmail}, Has OTP: ${!!user.otp}, Code Matches: ${isCodeMatch}, Expired: ${isExpired}, Server Time: ${new Date().toISOString()}, OTP Expires At: ${user.otp?.expiresAt ? new Date(user.otp.expiresAt).toISOString() : 'N/A'}`);
+
+    if (!user.otp || !isCodeMatch || isExpired) {
       return next(new ErrorResponse('Invalid or expired OTP code', 400));
     }
 
@@ -395,7 +402,7 @@ export const loginSendOtp = async (req, res, next) => {
     }
 
     const otpCode = generateOTP();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    const otpExpires = new Date(Date.now() + 30 * 60 * 1000); // 30 mins
     const hashedOtp = hashOTP(otpCode);
 
     user.otp = { code: hashedOtp, expiresAt: otpExpires };
@@ -460,7 +467,14 @@ export const loginVerifyOtp = async (req, res, next) => {
       return next(new ErrorResponse('User not found', 404));
     }
 
-    if (!user.otp || user.otp.code !== hashOTP(otp) || new Date() > user.otp.expiresAt) {
+    // Allow 10 minutes clock skew grace period between database and server
+    const clockSkewGraceMs = 10 * 60 * 1000;
+    const isExpired = user.otp ? (Date.now() - clockSkewGraceMs > new Date(user.otp.expiresAt).getTime()) : true;
+    const isCodeMatch = user.otp ? (user.otp.code === hashOTP(otp)) : false;
+
+    console.log(`[VERIFY LOGIN OTP] Email: ${normalizedEmail}, Has OTP: ${!!user.otp}, Code Matches: ${isCodeMatch}, Expired: ${isExpired}, Server Time: ${new Date().toISOString()}, OTP Expires At: ${user.otp?.expiresAt ? new Date(user.otp.expiresAt).toISOString() : 'N/A'}`);
+
+    if (!user.otp || !isCodeMatch || isExpired) {
       return next(new ErrorResponse('Invalid or expired OTP code', 400));
     }
 
