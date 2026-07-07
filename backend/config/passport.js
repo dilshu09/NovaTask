@@ -29,7 +29,7 @@ passport.use(
         let user;
 
         if (isDbConnected) {
-          user = await User.findOne({ email });
+          user = await User.findOne({ email: email.toLowerCase() });
         } else {
           user = await mockStore.findUserByEmail(email);
         }
@@ -52,7 +52,7 @@ passport.use(
         if (isDbConnected) {
           user = await User.create({
             name,
-            email,
+            email: email.toLowerCase(),
             googleId,
             isVerified: true,
             avatar,

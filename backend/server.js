@@ -96,7 +96,7 @@ app.post('/api/auth/oauth-mock', async (req, res, next) => {
     let user;
 
     if (isDbConnected) {
-      user = await User.findOne({ email });
+      user = await User.findOne({ email: email.toLowerCase() });
     } else {
       user = await mockStore.findUserByEmail(email);
     }
@@ -108,7 +108,7 @@ app.post('/api/auth/oauth-mock', async (req, res, next) => {
       if (isDbConnected) {
         user = await User.create({
           name,
-          email,
+          email: email.toLowerCase(),
           isVerified: true,
           [providerField]: id || `mock_oauth_id_${Date.now()}`,
         });

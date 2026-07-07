@@ -28,13 +28,14 @@ export const register = async (req, res, next) => {
     }
 
     const { name, email } = validation.data;
+    const normalizedEmail = email.toLowerCase();
     const isDbConnected = mongoose.connection.readyState === 1;
 
     let user;
     if (isDbConnected) {
-      user = await User.findOne({ email });
+      user = await User.findOne({ email: normalizedEmail });
     } else {
-      user = await mockStore.findUserByEmail(email);
+      user = await mockStore.findUserByEmail(normalizedEmail);
     }
 
     if (user && user.isVerified) {
@@ -57,7 +58,7 @@ export const register = async (req, res, next) => {
       if (isDbConnected) {
         user = await User.create({
           name,
-          email,
+          email: normalizedEmail,
           otp: { code: hashedOtp, expiresAt: otpExpires },
         });
       } else {
@@ -73,7 +74,7 @@ export const register = async (req, res, next) => {
 
     // Send real/Ethereal email containing the verification OTP
     const emailResult = await sendEmail({
-      email,
+      email: normalizedEmail,
       subject: 'NovaTask - Verify Your Email',
       html: `
         <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e4e4e7; border-radius: 12px; background: #ffffff;">
@@ -91,7 +92,7 @@ export const register = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Verification OTP sent to email. Please verify to continue.',
-      email,
+      email: normalizedEmail,
       previewUrl: emailResult?.previewUrl || undefined,
     });
   } catch (error) {
@@ -111,13 +112,14 @@ export const verifyOtp = async (req, res, next) => {
     }
 
     const { email, otp } = validation.data;
+    const normalizedEmail = email.toLowerCase();
     const isDbConnected = mongoose.connection.readyState === 1;
 
     let user;
     if (isDbConnected) {
-      user = await User.findOne({ email });
+      user = await User.findOne({ email: normalizedEmail });
     } else {
-      user = await mockStore.findUserByEmail(email);
+      user = await mockStore.findUserByEmail(normalizedEmail);
     }
 
     if (!user) {
@@ -378,13 +380,14 @@ export const loginSendOtp = async (req, res, next) => {
     }
 
     const { email } = validation.data;
+    const normalizedEmail = email.toLowerCase();
     const isDbConnected = mongoose.connection.readyState === 1;
 
     let user;
     if (isDbConnected) {
-      user = await User.findOne({ email });
+      user = await User.findOne({ email: normalizedEmail });
     } else {
-      user = await mockStore.findUserByEmail(email);
+      user = await mockStore.findUserByEmail(normalizedEmail);
     }
 
     if (!user) {
@@ -405,7 +408,7 @@ export const loginSendOtp = async (req, res, next) => {
 
     // Send email via nodemailer
     const emailResult = await sendEmail({
-      email,
+      email: normalizedEmail,
       subject: 'NovaTask - Login Verification Code',
       html: `
         <div style="font-family: sans-serif; max-width: 500px; margin: auto; padding: 20px; border: 1px solid #e4e4e7; border-radius: 12px; background: #ffffff;">
@@ -423,7 +426,7 @@ export const loginSendOtp = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Login OTP verification email sent.',
-      email,
+      email: normalizedEmail,
       previewUrl: emailResult?.previewUrl || undefined,
     });
   } catch (error) {
@@ -443,13 +446,14 @@ export const loginVerifyOtp = async (req, res, next) => {
     }
 
     const { email, otp } = validation.data;
+    const normalizedEmail = email.toLowerCase();
     const isDbConnected = mongoose.connection.readyState === 1;
 
     let user;
     if (isDbConnected) {
-      user = await User.findOne({ email });
+      user = await User.findOne({ email: normalizedEmail });
     } else {
-      user = await mockStore.findUserByEmail(email);
+      user = await mockStore.findUserByEmail(normalizedEmail);
     }
 
     if (!user) {
