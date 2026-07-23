@@ -79,7 +79,7 @@ NovaTask/
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone <https://github.com/dilshu09/NovaTask.git>
    cd NovaTask
    ```
 
